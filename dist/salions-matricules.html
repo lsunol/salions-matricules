@@ -1,0 +1,1983 @@
+<!--
+🏘️ Salions Matrículas - Análisis de Accesos Vehiculares
+Generado el: 2025-08-26
+
+Esta aplicación permite analizar archivos CSV con datos de matrículas,
+agrupándolos por socio y detectando posibles abusos del sistema.
+
+Características:
+- Procesamiento local de datos (sin envío a servidores)
+- Filtros predefinidos y personalizables
+- Detección automática de patrones sospechosos
+- Exportación de resultados
+- Interfaz responsiva y fácil de usar
+
+Para usar: Abrir este archivo en cualquier navegador web moderno
+-->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salions Matrículas - Análisis de Accesos</title>
+    <style>
+        /* Reset y variables CSS */
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #64748b;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --danger-color: #dc2626;
+            --background: #f8fafc;
+            --surface: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --radius: 0.5rem;
+            --font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--background);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        /* Secciones */
+        section {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        section h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        /* Upload section */
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius);
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover,
+        .upload-area.drag-over {
+            border-color: var(--primary-color);
+            background-color: #f0f7ff;
+        }
+
+        .upload-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+        }
+
+        .upload-content h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .upload-content p {
+            color: var(--text-secondary);
+        }
+
+        .file-info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f0f7ff;
+            border-radius: var(--radius);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-name {
+            font-weight: 600;
+        }
+
+        .file-size {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Summary cards */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+            color: white;
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            text-align: center;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        /* Filters */
+        .filters-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .filter-group input,
+        .filter-group select {
+            padding: 0.5rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
+        }
+
+        /* Buttons */
+        .btn-primary,
+        .btn-secondary {
+            padding: 0.625rem 1.25rem;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--surface);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--background);
+        }
+
+        /* Results section */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .results-table th,
+        .results-table td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .results-table th {
+            background-color: var(--background);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .results-table th:hover {
+            background-color: #e2e8f0;
+        }
+
+        .sort-indicator {
+            margin-left: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .sort-indicator.active {
+            color: var(--primary-color);
+        }
+
+        .results-table tr:hover {
+            background-color: var(--background);
+        }
+
+        /* Status badges */
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background-color: #dcfce7;
+            color: var(--success-color);
+        }
+
+        .status-expired {
+            background-color: #fee2e2;
+            color: var(--danger-color);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            padding: 1rem;
+        }
+
+        #pageInfo {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid var(--border);
+            margin-top: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 0.5rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .summary-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .filters-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .results-table {
+                font-size: 0.75rem;
+            }
+            
+            .results-table th,
+            .results-table td {
+                padding: 0.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .upload-area {
+                padding: 2rem 1rem;
+            }
+        }
+
+        /* Utility classes */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-success {
+            color: var(--success-color);
+        }
+
+        .text-danger {
+            color: var(--danger-color);
+        }
+
+        .text-warning {
+            color: var(--warning-color);
+        }
+
+        /* Dinamic styles for plates and notifications */
+        .plates-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+        .plate-badge {
+            background-color: #f1f5f9;
+            color: #475569;
+            padding: 0.125rem 0.375rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        /* Notification styles */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            min-width: 300px;
+            max-width: 500px;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+        .notification-show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .notification-hide {
+            opacity: 0;
+            transform: translateX(100%);
+        }
+        .notification-content {
+            display: flex;
+            align-items: center;
+            padding: 1rem;
+            gap: 0.75rem;
+        }
+        .notification-success {
+            background-color: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+        }
+        .notification-error {
+            background-color: #fef2f2;
+            border: 1px solid #fca5a5;
+            color: #991b1b;
+        }
+        .notification-warning {
+            background-color: #fffbeb;
+            border: 1px solid #fed7aa;
+            color: #92400e;
+        }
+        .notification-info {
+            background-color: #eff6ff;
+            border: 1px solid #93c5fd;
+            color: #1e40af;
+        }
+        .notification-message {
+            flex: 1;
+            font-weight: 500;
+        }
+        .notification-close {
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0;
+            opacity: 0.7;
+            transition: opacity 0.2s ease;
+        }
+        .notification-close:hover {
+            opacity: 1;
+        }
+
+        /* Modal styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-show {
+            opacity: 1;
+        }
+        .modal-hide {
+            opacity: 0;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 0.5rem;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: auto;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        .modal-show .modal-content {
+            transform: scale(1);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .modal-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            color: #64748b;
+            transition: color 0.2s ease;
+        }
+        .modal-close:hover {
+            color: #1e293b;
+        }
+        .modal-body {
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🏘️ Salions Matrículas</h1>
+            <p>Análisis de permisos de acceso vehicular</p>
+        </header>
+
+        <main class="main">
+            <!-- Sección de carga de archivo -->
+            <section class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-content">
+                        <div class="upload-icon">📁</div>
+                        <h3>Cargar archivo CSV</h3>
+                        <p>Arrastra tu archivo aquí o haz clic para seleccionar</p>
+                        <input type="file" id="fileInput" accept=".csv" hidden>
+                    </div>
+                </div>
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <span class="file-name" id="fileName"></span>
+                    <span class="file-size" id="fileSize"></span>
+                </div>
+            </section>
+
+            <!-- Sección de resumen -->
+            <section class="summary-section" id="summarySection" style="display: none;">
+                <h2>📊 Resumen del análisis</h2>
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="card-value" id="totalRecords">0</div>
+                        <div class="card-label">Total registros</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-value" id="totalMembers">0</div>
+                        <div class="card-label">Socios únicos</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-value" id="totalPlates">0</div>
+                        <div class="card-label">Matrículas únicas</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="card-value" id="avgPlatesPerMember">0</div>
+                        <div class="card-label">Promedio matrículas/socio</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección de filtros -->
+            <section class="filters-section" id="filtersSection" style="display: none;">
+                <h2>🔍 Filtros de análisis</h2>
+                <div class="filters-container">
+                    <div class="filter-group">
+                        <label for="platesThreshold">Mínimo matrículas:</label>
+                        <input type="number" id="platesThreshold" min="1" value="5">
+                    </div>
+                    <div class="filter-group">
+                        <label for="dateRange">Periodo:</label>
+                        <select id="dateRange">
+                            <option value="all">Todo el periodo</option>
+                            <option value="30">Últimos 30 días</option>
+                            <option value="90">Últimos 90 días</option>
+                            <option value="180">Últimos 6 meses</option>
+                            <option value="365">Último año</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="seasonFilter">Temporada:</label>
+                        <select id="seasonFilter">
+                            <option value="all">Todas</option>
+                            <option value="winter">Invierno</option>
+                            <option value="spring">Primavera</option>
+                            <option value="summer">Verano</option>
+                            <option value="autumn">Otoño</option>
+                        </select>
+                    </div>
+                    <button id="applyFilters" class="btn-primary">Aplicar filtros</button>
+                    <button id="resetFilters" class="btn-secondary">Resetear</button>
+                </div>
+            </section>
+
+            <!-- Sección de resultados -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-header">
+                    <h2>📋 Resultados del análisis</h2>
+                    <div class="results-actions">
+                        <button id="exportResults" class="btn-secondary">💾 Exportar resultados</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table id="resultsTable" class="results-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="member">Socio <span class="sort-indicator"></span></th>
+                                <th data-sort="platesCount">Nº Matrículas <span class="sort-indicator"></span></th>
+                                <th data-sort="plates">Matrículas <span class="sort-indicator"></span></th>
+                                <th data-sort="dateRange">Rango de fechas <span class="sort-indicator"></span></th>
+                                <th data-sort="status">Estado actual <span class="sort-indicator"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pagination" style="display: none;">
+                    <button id="prevPage" class="btn-secondary">❮ Anterior</button>
+                    <span id="pageInfo"></span>
+                    <button id="nextPage" class="btn-secondary">Siguiente ❯</button>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>© 2025 Salions Matrículas - Análisis local de datos</p>
+        </footer>
+    </div>
+
+    <!-- Scripts embebidos -->
+    <script>
+        // === PARSER CSV ===
+        class CSVParser {
+            constructor() {
+                this.data = [];
+                this.headers = [];
+                this.errors = [];
+            }
+
+            async parseFile(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    
+                    reader.onload = (e) => {
+                        try {
+                            const text = e.target.result;
+                            const parsed = this.parseCSVText(text);
+                            resolve(parsed);
+                        } catch (error) {
+                            reject(error);
+                        }
+                    };
+                    
+                    reader.onerror = () => {
+                        reject(new Error('Error al leer el archivo'));
+                    };
+                    
+                    reader.readAsText(file, 'UTF-8');
+                });
+            }
+
+            parseCSVText(csvText) {
+                this.data = [];
+                this.headers = [];
+                this.errors = [];
+
+                const lines = csvText.split('\n').filter(line => line.trim());
+                
+                if (lines.length === 0) {
+                    throw new Error('El archivo CSV está vacío');
+                }
+
+                this.headers = this.parseLine(lines[0]);
+                this.validateHeaders();
+
+                for (let i = 1; i < lines.length; i++) {
+                    const lineData = this.parseLine(lines[i]);
+                    
+                    if (lineData.length === this.headers.length) {
+                        const record = this.createRecord(lineData, i + 1);
+                        if (record) {
+                            this.data.push(record);
+                        }
+                    } else if (lineData.some(cell => cell.trim())) {
+                        this.errors.push({
+                            line: i + 1,
+                            error: `Número incorrecto de columnas (esperadas: ${this.headers.length}, encontradas: ${lineData.length})`,
+                            data: lineData.join(',')
+                        });
+                    }
+                }
+
+                if (this.data.length === 0) {
+                    throw new Error('No se pudieron procesar datos válidos del archivo CSV');
+                }
+
+                return {
+                    data: this.data,
+                    headers: this.headers,
+                    errors: this.errors,
+                    totalLines: lines.length - 1,
+                    validRecords: this.data.length
+                };
+            }
+
+            parseLine(line) {
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+                let i = 0;
+
+                while (i < line.length) {
+                    const char = line[i];
+                    const nextChar = line[i + 1];
+
+                    if (char === '"') {
+                        if (inQuotes && nextChar === '"') {
+                            current += '"';
+                            i += 2;
+                        } else {
+                            inQuotes = !inQuotes;
+                            i++;
+                        }
+                    } else if (char === ',' && !inQuotes) {
+                        fields.push(current.trim());
+                        current = '';
+                        i++;
+                    } else {
+                        current += char;
+                        i++;
+                    }
+                }
+
+                fields.push(current.trim());
+                return fields;
+            }
+
+            validateHeaders() {
+                const requiredFields = ['matricula', 'fecha_inicio', 'fecha_fin', 'socio'];
+                const lowerHeaders = this.headers.map(h => h.toLowerCase().trim());
+                
+                const fieldMappings = {
+                    'matricula': ['matricula', 'matrícula', 'placa', 'plate', 'license_plate'],
+                    'fecha_inicio': ['fecha_inicio', 'fecha inicio', 'start_date', 'inicio', 'from'],
+                    'fecha_fin': ['fecha_fin', 'fecha fin', 'end_date', 'fin', 'to', 'hasta'],
+                    'socio': ['socio', 'member', 'miembro', 'peticionario', 'solicitante', 'nombre']
+                };
+
+                this.columnMapping = {};
+                
+                for (const [field, variations] of Object.entries(fieldMappings)) {
+                    const foundIndex = lowerHeaders.findIndex(header => 
+                        variations.some(variation => header.includes(variation))
+                    );
+                    
+                    if (foundIndex === -1) {
+                        throw new Error(`No se encontró la columna requerida: ${field}. Columnas disponibles: ${this.headers.join(', ')}`);
+                    }
+                    
+                    this.columnMapping[field] = foundIndex;
+                }
+            }
+
+            createRecord(lineData, lineNumber) {
+                try {
+                    const record = {
+                        matricula: this.cleanPlate(lineData[this.columnMapping.matricula]),
+                        fechaInicio: this.parseDate(lineData[this.columnMapping.fecha_inicio]),
+                        fechaFin: this.parseDate(lineData[this.columnMapping.fecha_fin]),
+                        socio: this.cleanMemberName(lineData[this.columnMapping.socio]),
+                        lineNumber: lineNumber
+                    };
+
+                    if (!record.matricula || !record.socio) {
+                        this.errors.push({
+                            line: lineNumber,
+                            error: 'Matrícula o socio vacío',
+                            data: lineData.join(',')
+                        });
+                        return null;
+                    }
+
+                    if (!record.fechaInicio && !record.fechaFin) {
+                        this.errors.push({
+                            line: lineNumber,
+                            error: 'Al menos una fecha debe ser válida',
+                            data: lineData.join(',')
+                        });
+                        return null;
+                    }
+
+                    return record;
+                } catch (error) {
+                    this.errors.push({
+                        line: lineNumber,
+                        error: error.message,
+                        data: lineData.join(',')
+                    });
+                    return null;
+                }
+            }
+
+            cleanPlate(plate) {
+                if (!plate || typeof plate !== 'string') return '';
+                
+                return plate
+                    .trim()
+                    .toUpperCase()
+                    .replace(/\s+/g, '')
+                    .replace(/[^A-Z0-9]/g, '');
+            }
+
+            cleanMemberName(memberName) {
+                if (!memberName || typeof memberName !== 'string') return '';
+                
+                return memberName
+                    .trim()
+                    .replace(/\s+/g, ' ')
+                    .toLowerCase()
+                    .replace(/\b\w/g, l => l.toUpperCase());
+            }
+
+            parseDate(dateStr) {
+                if (!dateStr || typeof dateStr !== 'string') return null;
+                
+                const cleaned = dateStr.trim();
+                if (!cleaned) return null;
+
+                const formats = [
+                    /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/,
+                    /^(\d{1,2})-(\d{1,2})-(\d{4})$/,
+                    /^(\d{4})\/(\d{1,2})\/(\d{1,2})$/,
+                    /^(\d{4})-(\d{1,2})-(\d{1,2})$/
+                ];
+
+                for (const format of formats) {
+                    const match = cleaned.match(format);
+                    if (match) {
+                        let day, month, year;
+                        
+                        if (format.source.startsWith('^(\\d{4})')) {
+                            [, year, month, day] = match;
+                        } else {
+                            [, day, month, year] = match;
+                        }
+                        
+                        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                        
+                        if (date.getFullYear() == year && 
+                            date.getMonth() == month - 1 && 
+                            date.getDate() == day) {
+                            return date;
+                        }
+                    }
+                }
+
+                const jsDate = new Date(cleaned);
+                if (!isNaN(jsDate.getTime())) {
+                    return jsDate;
+                }
+
+                return null;
+            }
+
+            getStats() {
+                return {
+                    totalRecords: this.data.length,
+                    totalErrors: this.errors.length,
+                    errorRate: this.data.length > 0 ? (this.errors.length / (this.data.length + this.errors.length) * 100).toFixed(2) : 0,
+                    headers: this.headers,
+                    columnMapping: this.columnMapping
+                };
+            }
+
+            getErrors() {
+                return this.errors;
+            }
+        }
+
+        // === ANALIZADOR DE DATOS ===
+        class DataAnalyzer {
+            constructor() {
+                this.rawData = [];
+                this.processedData = [];
+                this.memberGroups = new Map();
+            }
+
+            loadData(csvData) {
+                this.rawData = csvData;
+                this.processData();
+                this.groupByMember();
+            }
+
+            processData() {
+                this.processedData = this.rawData.map(record => {
+                    const now = new Date();
+                    const isActive = this.isRecordActive(record, now);
+                    const season = this.getSeason(record.fechaInicio || record.fechaFin);
+                    
+                    return {
+                        ...record,
+                        isActive,
+                        season,
+                        duration: this.calculateDuration(record.fechaInicio, record.fechaFin)
+                    };
+                });
+            }
+
+            groupByMember() {
+                this.memberGroups.clear();
+                
+                for (const record of this.processedData) {
+                    if (!this.memberGroups.has(record.socio)) {
+                        this.memberGroups.set(record.socio, {
+                            memberName: record.socio,
+                            plates: new Set(),
+                            records: [],
+                            activeRecords: [],
+                            totalRecords: 0,
+                            dateRange: { start: null, end: null },
+                            seasons: new Set()
+                        });
+                    }
+                    
+                    const group = this.memberGroups.get(record.socio);
+                    group.plates.add(record.matricula);
+                    group.records.push(record);
+                    group.totalRecords++;
+                    
+                    if (record.isActive) {
+                        group.activeRecords.push(record);
+                    }
+                    
+                    if (record.fechaInicio) {
+                        if (!group.dateRange.start || record.fechaInicio < group.dateRange.start) {
+                            group.dateRange.start = record.fechaInicio;
+                        }
+                    }
+                    
+                    if (record.fechaFin) {
+                        if (!group.dateRange.end || record.fechaFin > group.dateRange.end) {
+                            group.dateRange.end = record.fechaFin;
+                        }
+                    }
+                    
+                    if (record.season) {
+                        group.seasons.add(record.season);
+                    }
+                }
+            }
+
+            isRecordActive(record, date = new Date()) {
+                const { fechaInicio, fechaFin } = record;
+                
+                if (!fechaInicio && !fechaFin) return false;
+                
+                if (fechaInicio && !fechaFin) {
+                    return fechaInicio <= date;
+                }
+                
+                if (!fechaInicio && fechaFin) {
+                    return date <= fechaFin;
+                }
+                
+                return fechaInicio <= date && date <= fechaFin;
+            }
+
+            getSeason(date) {
+                if (!date) return null;
+                
+                const month = date.getMonth() + 1;
+                
+                if (month >= 12 || month <= 2) return 'winter';
+                if (month >= 3 && month <= 5) return 'spring';
+                if (month >= 6 && month <= 8) return 'summer';
+                if (month >= 9 && month <= 11) return 'autumn';
+                
+                return null;
+            }
+
+            calculateDuration(startDate, endDate) {
+                if (!startDate || !endDate) return null;
+                
+                const timeDiff = endDate.getTime() - startDate.getTime();
+                return Math.ceil(timeDiff / (1000 * 3600 * 24));
+            }
+
+            applyFilters(filters = {}) {
+                const {
+                    minPlates = 1,
+                    dateRangeDays = null,
+                    season = 'all',
+                    onlyActive = false
+                } = filters;
+                
+                let filteredGroups = Array.from(this.memberGroups.values());
+                
+                if (minPlates > 1) {
+                    filteredGroups = filteredGroups.filter(group => group.plates.size >= minPlates);
+                }
+                
+                if (dateRangeDays) {
+                    const cutoffDate = new Date();
+                    cutoffDate.setDate(cutoffDate.getDate() - dateRangeDays);
+                    
+                    filteredGroups = filteredGroups.filter(group => 
+                        group.records.some(record => 
+                            (record.fechaInicio && record.fechaInicio >= cutoffDate) ||
+                            (record.fechaFin && record.fechaFin >= cutoffDate)
+                        )
+                    );
+                }
+                
+                if (season !== 'all') {
+                    filteredGroups = filteredGroups.filter(group => 
+                        group.seasons.has(season)
+                    );
+                }
+                
+                if (onlyActive) {
+                    filteredGroups = filteredGroups.filter(group => 
+                        group.activeRecords.length > 0
+                    );
+                }
+                
+                return filteredGroups.map(group => ({
+                    member: group.memberName,
+                    platesCount: group.plates.size,
+                    plates: Array.from(group.plates).sort(),
+                    totalRecords: group.totalRecords,
+                    activeRecords: group.activeRecords.length,
+                    dateRange: this.formatDateRange(group.dateRange),
+                    seasons: Array.from(group.seasons),
+                    status: group.activeRecords.length > 0 ? 'active' : 'expired',
+                    records: group.records
+                }));
+            }
+
+            formatDateRange(dateRange) {
+                const { start, end } = dateRange;
+                
+                if (!start && !end) return 'Sin fechas';
+                if (!start) return `Hasta ${this.formatDate(end)}`;
+                if (!end) return `Desde ${this.formatDate(start)}`;
+                
+                if (start.getTime() === end.getTime()) {
+                    return this.formatDate(start);
+                }
+                
+                return `${this.formatDate(start)} - ${this.formatDate(end)}`;
+            }
+
+            formatDate(date) {
+                if (!date) return '';
+                
+                return date.toLocaleDateString('es-ES', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            }
+
+            getGeneralStats() {
+                const totalRecords = this.processedData.length;
+                const totalMembers = this.memberGroups.size;
+                const totalPlates = new Set(this.processedData.map(r => r.matricula)).size;
+                const activeRecords = this.processedData.filter(r => r.isActive).length;
+                
+                const platesPerMember = Array.from(this.memberGroups.values()).map(g => g.plates.size);
+                const avgPlatesPerMember = platesPerMember.length > 0 
+                    ? (platesPerMember.reduce((sum, count) => sum + count, 0) / platesPerMember.length).toFixed(1)
+                    : 0;
+                
+                const maxPlatesPerMember = platesPerMember.length > 0 ? Math.max(...platesPerMember) : 0;
+                const minPlatesPerMember = platesPerMember.length > 0 ? Math.min(...platesPerMember) : 0;
+                
+                const seasonStats = {
+                    winter: 0,
+                    spring: 0,
+                    summer: 0,
+                    autumn: 0
+                };
+                
+                this.processedData.forEach(record => {
+                    if (record.season) {
+                        seasonStats[record.season]++;
+                    }
+                });
+                
+                return {
+                    totalRecords,
+                    totalMembers,
+                    totalPlates,
+                    activeRecords,
+                    expiredRecords: totalRecords - activeRecords,
+                    avgPlatesPerMember,
+                    maxPlatesPerMember,
+                    minPlatesPerMember,
+                    seasonStats,
+                    dataRange: this.getDataDateRange()
+                };
+            }
+
+            getDataDateRange() {
+                let minDate = null;
+                let maxDate = null;
+                
+                this.processedData.forEach(record => {
+                    if (record.fechaInicio) {
+                        if (!minDate || record.fechaInicio < minDate) {
+                            minDate = record.fechaInicio;
+                        }
+                    }
+                    if (record.fechaFin) {
+                        if (!maxDate || record.fechaFin > maxDate) {
+                            maxDate = record.fechaFin;
+                        }
+                    }
+                });
+                
+                return {
+                    start: minDate,
+                    end: maxDate,
+                    formatted: this.formatDateRange({ start: minDate, end: maxDate })
+                };
+            }
+
+            findSuspiciousMembers(criteria = {}) {
+                const {
+                    minPlates = 10,
+                    shortDuration = 30,
+                    overlappingPeriods = true
+                } = criteria;
+                
+                const suspicious = [];
+                
+                for (const group of this.memberGroups.values()) {
+                    const issues = [];
+                    
+                    if (group.plates.size >= minPlates) {
+                        issues.push(`${group.plates.size} matrículas registradas`);
+                    }
+                    
+                    const shortPeriods = group.records.filter(record => 
+                        record.duration && record.duration <= shortDuration
+                    );
+                    
+                    if (shortPeriods.length >= 3) {
+                        issues.push(`${shortPeriods.length} períodos de ${shortDuration} días o menos`);
+                    }
+                    
+                    if (overlappingPeriods) {
+                        const overlaps = this.findOverlappingPeriods(group.records);
+                        if (overlaps.length > 0) {
+                            issues.push(`${overlaps.length} períodos solapados detectados`);
+                        }
+                    }
+                    
+                    if (issues.length > 0) {
+                        suspicious.push({
+                            member: group.memberName,
+                            platesCount: group.plates.size,
+                            issues: issues,
+                            severity: this.calculateSeverity(issues.length, group.plates.size),
+                            records: group.records
+                        });
+                    }
+                }
+                
+                return suspicious.sort((a, b) => b.severity - a.severity);
+            }
+
+            findOverlappingPeriods(records) {
+                const overlaps = [];
+                
+                for (let i = 0; i < records.length; i++) {
+                    for (let j = i + 1; j < records.length; j++) {
+                        const record1 = records[i];
+                        const record2 = records[j];
+                        
+                        if (record1.matricula === record2.matricula) {
+                            if (this.periodsOverlap(record1, record2)) {
+                                overlaps.push({ record1, record2 });
+                            }
+                        }
+                    }
+                }
+                
+                return overlaps;
+            }
+
+            periodsOverlap(period1, period2) {
+                const start1 = period1.fechaInicio;
+                const end1 = period1.fechaFin;
+                const start2 = period2.fechaInicio;
+                const end2 = period2.fechaFin;
+                
+                if (!start1 || !end1 || !start2 || !end2) return false;
+                
+                return start1 <= end2 && start2 <= end1;
+            }
+
+            calculateSeverity(issuesCount, platesCount) {
+                return issuesCount * 10 + Math.min(platesCount, 50);
+            }
+
+            exportToCSV(data, filename = 'salions_analisis.csv') {
+                const headers = ['Socio', 'Num_Matriculas', 'Matriculas', 'Rango_Fechas', 'Estado', 'Registros_Activos'];
+                const csvContent = [
+                    headers.join(','),
+                    ...data.map(row => [
+                        `"${row.member}"`,
+                        row.platesCount,
+                        `"${row.plates.join(', ')}"`,
+                        `"${row.dateRange}"`,
+                        row.status,
+                        row.activeRecords
+                    ].join(','))
+                ].join('\n');
+                
+                this.downloadCSV(csvContent, filename);
+            }
+
+            downloadCSV(content, filename) {
+                const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        // === COMPONENTES UI ===
+        class UIComponents {
+            constructor() {
+                this.currentSort = { column: null, direction: 'asc' };
+                this.currentPage = 1;
+                this.itemsPerPage = 20;
+                this.filteredData = [];
+            }
+
+            updateSummaryCards(stats) {
+                const elements = {
+                    totalRecords: document.getElementById('totalRecords'),
+                    totalMembers: document.getElementById('totalMembers'),
+                    totalPlates: document.getElementById('totalPlates'),
+                    avgPlatesPerMember: document.getElementById('avgPlatesPerMember')
+                };
+
+                if (elements.totalRecords) elements.totalRecords.textContent = stats.totalRecords.toLocaleString();
+                if (elements.totalMembers) elements.totalMembers.textContent = stats.totalMembers.toLocaleString();
+                if (elements.totalPlates) elements.totalPlates.textContent = stats.totalPlates.toLocaleString();
+                if (elements.avgPlatesPerMember) elements.avgPlatesPerMember.textContent = stats.avgPlatesPerMember;
+            }
+
+            renderTable(data) {
+                this.filteredData = data;
+                this.currentPage = 1;
+                this.renderCurrentPage();
+                this.updatePagination();
+            }
+
+            renderCurrentPage() {
+                const tbody = document.getElementById('resultsTableBody');
+                if (!tbody) return;
+
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const endIndex = startIndex + this.itemsPerPage;
+                const pageData = this.filteredData.slice(startIndex, endIndex);
+
+                tbody.innerHTML = pageData.map(row => `
+                    <tr>
+                        <td>${this.escapeHtml(row.member)}</td>
+                        <td>${row.platesCount}</td>
+                        <td>
+                            <div class="plates-list">
+                                ${row.plates.map(plate => `<span class="plate-badge">${plate}</span>`).join('')}
+                            </div>
+                        </td>
+                        <td>${row.dateRange}</td>
+                        <td>
+                            <span class="status-badge status-${row.status}">
+                                ${row.status === 'active' ? '✅ Activo' : '❌ Expirado'}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            setupTableSorting() {
+                const headers = document.querySelectorAll('.results-table th[data-sort]');
+                
+                headers.forEach(header => {
+                    header.addEventListener('click', () => {
+                        const column = header.dataset.sort;
+                        this.sortTable(column);
+                    });
+                });
+            }
+
+            sortTable(column) {
+                if (this.currentSort.column === column) {
+                    this.currentSort.direction = this.currentSort.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.currentSort.column = column;
+                    this.currentSort.direction = 'asc';
+                }
+
+                this.filteredData.sort((a, b) => {
+                    let valueA, valueB;
+
+                    switch (column) {
+                        case 'member':
+                            valueA = a.member.toLowerCase();
+                            valueB = b.member.toLowerCase();
+                            break;
+                        case 'platesCount':
+                            valueA = a.platesCount;
+                            valueB = b.platesCount;
+                            break;
+                        case 'plates':
+                            valueA = a.plates.join(',').toLowerCase();
+                            valueB = b.plates.join(',').toLowerCase();
+                            break;
+                        case 'dateRange':
+                            valueA = a.records[0]?.fechaInicio || new Date(0);
+                            valueB = b.records[0]?.fechaInicio || new Date(0);
+                            break;
+                        case 'status':
+                            valueA = a.status;
+                            valueB = b.status;
+                            break;
+                        default:
+                            valueA = a[column];
+                            valueB = b[column];
+                    }
+
+                    let comparison = 0;
+                    if (valueA > valueB) comparison = 1;
+                    if (valueA < valueB) comparison = -1;
+
+                    return this.currentSort.direction === 'desc' ? -comparison : comparison;
+                });
+
+                this.updateSortIndicators();
+                this.currentPage = 1;
+                this.renderCurrentPage();
+                this.updatePagination();
+            }
+
+            updateSortIndicators() {
+                document.querySelectorAll('.sort-indicator').forEach(indicator => {
+                    indicator.classList.remove('active');
+                    indicator.textContent = '';
+                });
+
+                const activeHeader = document.querySelector(`th[data-sort="${this.currentSort.column}"] .sort-indicator`);
+                if (activeHeader) {
+                    activeHeader.classList.add('active');
+                    activeHeader.textContent = this.currentSort.direction === 'asc' ? '↑' : '↓';
+                }
+            }
+
+            setupPagination() {
+                const prevButton = document.getElementById('prevPage');
+                const nextButton = document.getElementById('nextPage');
+
+                if (prevButton) {
+                    prevButton.addEventListener('click', () => {
+                        if (this.currentPage > 1) {
+                            this.currentPage--;
+                            this.renderCurrentPage();
+                            this.updatePagination();
+                        }
+                    });
+                }
+
+                if (nextButton) {
+                    nextButton.addEventListener('click', () => {
+                        const totalPages = Math.ceil(this.filteredData.length / this.itemsPerPage);
+                        if (this.currentPage < totalPages) {
+                            this.currentPage++;
+                            this.renderCurrentPage();
+                            this.updatePagination();
+                        }
+                    });
+                }
+            }
+
+            updatePagination() {
+                const totalPages = Math.ceil(this.filteredData.length / this.itemsPerPage);
+                const startRecord = ((this.currentPage - 1) * this.itemsPerPage) + 1;
+                const endRecord = Math.min(this.currentPage * this.itemsPerPage, this.filteredData.length);
+
+                const pageInfo = document.getElementById('pageInfo');
+                const prevButton = document.getElementById('prevPage');
+                const nextButton = document.getElementById('nextPage');
+                const pagination = document.getElementById('pagination');
+
+                if (pageInfo) {
+                    pageInfo.textContent = `${startRecord}-${endRecord} de ${this.filteredData.length} registros (Página ${this.currentPage} de ${totalPages})`;
+                }
+
+                if (prevButton) {
+                    prevButton.disabled = this.currentPage === 1;
+                }
+
+                if (nextButton) {
+                    nextButton.disabled = this.currentPage === totalPages;
+                }
+
+                if (pagination) {
+                    pagination.style.display = totalPages > 1 ? 'flex' : 'none';
+                }
+            }
+
+            showNotification(message, type = 'info', duration = 5000) {
+                const notification = document.createElement('div');
+                notification.className = `notification notification-${type}`;
+                notification.innerHTML = `
+                    <div class="notification-content">
+                        <span class="notification-icon">${this.getNotificationIcon(type)}</span>
+                        <span class="notification-message">${this.escapeHtml(message)}</span>
+                        <button class="notification-close">&times;</button>
+                    </div>
+                `;
+
+                document.body.appendChild(notification);
+
+                const closeButton = notification.querySelector('.notification-close');
+                const autoClose = setTimeout(() => {
+                    this.removeNotification(notification);
+                }, duration);
+
+                closeButton.addEventListener('click', () => {
+                    clearTimeout(autoClose);
+                    this.removeNotification(notification);
+                });
+
+                setTimeout(() => {
+                    notification.classList.add('notification-show');
+                }, 10);
+            }
+
+            getNotificationIcon(type) {
+                const icons = {
+                    success: '✅',
+                    error: '❌',
+                    warning: '⚠️',
+                    info: 'ℹ️'
+                };
+                return icons[type] || icons.info;
+            }
+
+            removeNotification(notification) {
+                notification.classList.add('notification-hide');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }
+
+            showModal(title, content) {
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.innerHTML = `
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h3>${this.escapeHtml(title)}</h3>
+                            <button class="modal-close">&times;</button>
+                        </div>
+                        <div class="modal-body">
+                            ${content}
+                        </div>
+                    </div>
+                `;
+
+                document.body.appendChild(modal);
+
+                const closeButton = modal.querySelector('.modal-close');
+                const overlay = modal;
+
+                const closeModal = () => {
+                    modal.classList.add('modal-hide');
+                    setTimeout(() => {
+                        if (modal.parentNode) {
+                            modal.parentNode.removeChild(modal);
+                        }
+                    }, 300);
+                };
+
+                closeButton.addEventListener('click', closeModal);
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        closeModal();
+                    }
+                });
+
+                setTimeout(() => {
+                    modal.classList.add('modal-show');
+                }, 10);
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            toggleSection(sectionId, show) {
+                const section = document.getElementById(sectionId);
+                if (section) {
+                    section.style.display = show ? 'block' : 'none';
+                }
+            }
+
+            setLoading(element, loading) {
+                const el = typeof element === 'string' ? document.querySelector(element) : element;
+                if (el) {
+                    if (loading) {
+                        el.classList.add('loading');
+                        el.disabled = true;
+                    } else {
+                        el.classList.remove('loading');
+                        el.disabled = false;
+                    }
+                }
+            }
+        }
+
+        // === APLICACIÓN PRINCIPAL ===
+        class SalionsApp {
+            constructor() {
+                this.csvParser = new CSVParser();
+                this.dataAnalyzer = new DataAnalyzer();
+                this.ui = new UIComponents();
+                this.currentData = null;
+                
+                this.init();
+            }
+
+            init() {
+                this.setupEventListeners();
+                this.ui.setupTableSorting();
+                this.ui.setupPagination();
+                
+                console.log('🏘️ Salions Matrículas - Aplicación inicializada');
+            }
+
+            setupEventListeners() {
+                this.setupFileUpload();
+                this.setupFilters();
+                this.setupExport();
+            }
+
+            setupFileUpload() {
+                const uploadArea = document.getElementById('uploadArea');
+                const fileInput = document.getElementById('fileInput');
+
+                uploadArea?.addEventListener('click', () => {
+                    fileInput?.click();
+                });
+
+                uploadArea?.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('drag-over');
+                });
+
+                uploadArea?.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('drag-over');
+                });
+
+                uploadArea?.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('drag-over');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                        this.handleFileSelection(files[0]);
+                    }
+                });
+
+                fileInput?.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.handleFileSelection(e.target.files[0]);
+                    }
+                });
+            }
+
+            async handleFileSelection(file) {
+                if (!file.name.toLowerCase().endsWith('.csv')) {
+                    this.ui.showNotification('Por favor, selecciona un archivo CSV válido', 'error');
+                    return;
+                }
+
+                const maxSize = 10 * 1024 * 1024;
+                if (file.size > maxSize) {
+                    this.ui.showNotification('El archivo es demasiado grande. Máximo 10MB', 'error');
+                    return;
+                }
+
+                this.showFileInfo(file);
+                
+                try {
+                    this.ui.showNotification('Procesando archivo CSV...', 'info');
+                    
+                    const parseResult = await this.csvParser.parseFile(file);
+                    
+                    if (parseResult.errors.length > 0) {
+                        const errorMsg = `Archivo procesado con ${parseResult.errors.length} errores. ${parseResult.validRecords} registros válidos de ${parseResult.totalLines} líneas.`;
+                        this.ui.showNotification(errorMsg, 'warning', 8000);
+                        
+                        if (parseResult.errors.length > 5) {
+                            this.showErrorDetails(parseResult.errors);
+                        }
+                    } else {
+                        this.ui.showNotification(`Archivo procesado exitosamente: ${parseResult.validRecords} registros`, 'success');
+                    }
+
+                    this.analyzeData(parseResult.data);
+                    
+                } catch (error) {
+                    console.error('Error procesando archivo:', error);
+                    this.ui.showNotification(`Error procesando archivo: ${error.message}`, 'error');
+                }
+            }
+
+            showFileInfo(file) {
+                const fileInfo = document.getElementById('fileInfo');
+                const fileName = document.getElementById('fileName');
+                const fileSize = document.getElementById('fileSize');
+
+                if (fileName) fileName.textContent = file.name;
+                if (fileSize) fileSize.textContent = this.formatFileSize(file.size);
+                if (fileInfo) fileInfo.style.display = 'flex';
+            }
+
+            formatFileSize(bytes) {
+                const units = ['B', 'KB', 'MB', 'GB'];
+                let size = bytes;
+                let unitIndex = 0;
+
+                while (size >= 1024 && unitIndex < units.length - 1) {
+                    size /= 1024;
+                    unitIndex++;
+                }
+
+                return `${size.toFixed(1)} ${units[unitIndex]}`;
+            }
+
+            showErrorDetails(errors) {
+                const errorList = errors.slice(0, 20).map(error => 
+                    `<div class="error-item">
+                        <strong>Línea ${error.line}:</strong> ${error.error}
+                        <br><small>${error.data}</small>
+                    </div>`
+                ).join('');
+
+                const moreErrors = errors.length > 20 ? `<p><em>... y ${errors.length - 20} errores más</em></p>` : '';
+
+                const content = `
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <p>Se encontraron ${errors.length} errores durante el procesamiento:</p>
+                        ${errorList}
+                        ${moreErrors}
+                    </div>
+                    <style>
+                        .error-item {
+                            padding: 0.5rem;
+                            margin: 0.5rem 0;
+                            background: #fef2f2;
+                            border-left: 3px solid #dc2626;
+                            border-radius: 0.25rem;
+                        }
+                        .error-item small {
+                            color: #6b7280;
+                            font-family: monospace;
+                        }
+                    </style>
+                `;
+
+                this.ui.showModal('Errores de procesamiento', content);
+            }
+
+            analyzeData(data) {
+                try {
+                    this.dataAnalyzer.loadData(data);
+                    this.currentData = data;
+
+                    const stats = this.dataAnalyzer.getGeneralStats();
+                    
+                    this.ui.updateSummaryCards(stats);
+                    this.showAnalysisSection();
+                    this.applyCurrentFilters();
+                    
+                    this.ui.showNotification('Análisis completado', 'success');
+                    
+                } catch (error) {
+                    console.error('Error analizando datos:', error);
+                    this.ui.showNotification(`Error en el análisis: ${error.message}`, 'error');
+                }
+            }
+
+            showAnalysisSection() {
+                this.ui.toggleSection('summarySection', true);
+                this.ui.toggleSection('filtersSection', true);
+                this.ui.toggleSection('resultsSection', true);
+            }
+
+            setupFilters() {
+                const applyButton = document.getElementById('applyFilters');
+                const resetButton = document.getElementById('resetFilters');
+
+                applyButton?.addEventListener('click', () => {
+                    this.applyCurrentFilters();
+                });
+
+                resetButton?.addEventListener('click', () => {
+                    this.resetFilters();
+                });
+
+                const filterInputs = document.querySelectorAll('#platesThreshold, #dateRange, #seasonFilter');
+                filterInputs.forEach(input => {
+                    input.addEventListener('change', () => {
+                        setTimeout(() => this.applyCurrentFilters(), 100);
+                    });
+                });
+            }
+
+            applyCurrentFilters() {
+                if (!this.currentData) return;
+
+                try {
+                    const filters = this.getCurrentFilters();
+                    const filteredData = this.dataAnalyzer.applyFilters(filters);
+                    
+                    this.ui.renderTable(filteredData);
+                    
+                    if (filteredData.length === 0) {
+                        this.ui.showNotification('No se encontraron resultados con los filtros aplicados', 'warning');
+                    } else {
+                        const message = `Mostrando ${filteredData.length} resultado(s) con los filtros aplicados`;
+                        this.ui.showNotification(message, 'info', 3000);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error aplicando filtros:', error);
+                    this.ui.showNotification('Error aplicando filtros', 'error');
+                }
+            }
+
+            getCurrentFilters() {
+                const platesThreshold = document.getElementById('platesThreshold');
+                const dateRange = document.getElementById('dateRange');
+                const seasonFilter = document.getElementById('seasonFilter');
+
+                return {
+                    minPlates: platesThreshold ? parseInt(platesThreshold.value) || 1 : 1,
+                    dateRangeDays: dateRange && dateRange.value !== 'all' ? parseInt(dateRange.value) : null,
+                    season: seasonFilter ? seasonFilter.value : 'all'
+                };
+            }
+
+            resetFilters() {
+                const platesThreshold = document.getElementById('platesThreshold');
+                const dateRange = document.getElementById('dateRange');
+                const seasonFilter = document.getElementById('seasonFilter');
+
+                if (platesThreshold) platesThreshold.value = 5;
+                if (dateRange) dateRange.value = 'all';
+                if (seasonFilter) seasonFilter.value = 'all';
+
+                this.applyCurrentFilters();
+                this.ui.showNotification('Filtros reiniciados', 'info', 2000);
+            }
+
+            setupExport() {
+                const exportButton = document.getElementById('exportResults');
+                
+                exportButton?.addEventListener('click', () => {
+                    this.exportResults();
+                });
+            }
+
+            exportResults() {
+                if (!this.ui.filteredData || this.ui.filteredData.length === 0) {
+                    this.ui.showNotification('No hay datos para exportar', 'warning');
+                    return;
+                }
+
+                try {
+                    const timestamp = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '_');
+                    const filename = `salions_analisis_${timestamp}.csv`;
+                    
+                    this.dataAnalyzer.exportToCSV(this.ui.filteredData, filename);
+                    this.ui.showNotification(`Archivo exportado: ${filename}`, 'success');
+                    
+                } catch (error) {
+                    console.error('Error exportando datos:', error);
+                    this.ui.showNotification('Error exportando los datos', 'error');
+                }
+            }
+
+            findSuspiciousMembers() {
+                if (!this.currentData) {
+                    this.ui.showNotification('No hay datos cargados', 'warning');
+                    return;
+                }
+
+                try {
+                    const suspicious = this.dataAnalyzer.findSuspiciousMembers({
+                        minPlates: 8,
+                        shortDuration: 30,
+                        overlappingPeriods: true
+                    });
+
+                    if (suspicious.length === 0) {
+                        this.ui.showNotification('No se encontraron patrones sospechosos', 'info');
+                        return;
+                    }
+
+                    const suspiciousList = suspicious.map(member => 
+                        `<div class="suspicious-member">
+                            <h4>${member.member}</h4>
+                            <p><strong>${member.platesCount} matrículas</strong></p>
+                            <ul>
+                                ${member.issues.map(issue => `<li>${issue}</li>`).join('')}
+                            </ul>
+                            <p><small>Severidad: ${member.severity}</small></p>
+                        </div>`
+                    ).join('');
+
+                    const content = `
+                        <div style="max-height: 500px; overflow-y: auto;">
+                            <p>Se encontraron <strong>${suspicious.length}</strong> socios con patrones sospechosos:</p>
+                            ${suspiciousList}
+                        </div>
+                        <style>
+                            .suspicious-member {
+                                padding: 1rem;
+                                margin: 1rem 0;
+                                background: #fef3c7;
+                                border-left: 4px solid #f59e0b;
+                                border-radius: 0.25rem;
+                            }
+                            .suspicious-member h4 {
+                                margin: 0 0 0.5rem 0;
+                                color: #92400e;
+                            }
+                            .suspicious-member ul {
+                                margin: 0.5rem 0;
+                                padding-left: 1.5rem;
+                            }
+                        </style>
+                    `;
+
+                    this.ui.showModal('Análisis de socios sospechosos', content);
+
+                } catch (error) {
+                    console.error('Error buscando socios sospechosos:', error);
+                    this.ui.showNotification('Error en el análisis de socios sospechosos', 'error');
+                }
+            }
+
+            addAnalysisButton() {
+                const resultsHeader = document.querySelector('.results-actions');
+                if (resultsHeader && !document.getElementById('analyzeButton')) {
+                    const button = document.createElement('button');
+                    button.id = 'analyzeButton';
+                    button.className = 'btn-secondary';
+                    button.innerHTML = '🔍 Detectar abusos';
+                    button.addEventListener('click', () => this.findSuspiciousMembers());
+                    resultsHeader.appendChild(button);
+                }
+            }
+        }
+
+        // Inicializar la aplicación cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new SalionsApp();
+            
+            window.salionsApp = app;
+            
+            const observer = new MutationObserver(() => {
+                if (document.getElementById('resultsSection').style.display !== 'none') {
+                    app.addAnalysisButton();
+                }
+            });
+            
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) {
+                observer.observe(resultsSection, { attributes: true, attributeFilter: ['style'] });
+            }
+        });
+
+        window.addEventListener('error', (e) => {
+            console.error('Error global:', e.error);
+            if (window.salionsApp) {
+                window.salionsApp.ui.showNotification('Se produjo un error inesperado', 'error');
+            }
+        });
+
+        window.addEventListener('dragover', (e) => e.preventDefault());
+        window.addEventListener('drop', (e) => e.preventDefault());
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "salions-matricules",
+  "version": "1.0.0",
+  "description": "Aplicación para análisis de matrículas de vehículos por socio en la urbanización",
+  "main": "src/index.html",
+  "scripts": {
+    "dev": "npx live-server src --port=3000",
+    "build": "node build/build.js",
+    "serve": "npx live-server dist --port=3000"
+  },
+  "keywords": ["csv", "analysis", "license-plates", "javascript", "html"],
+  "author": "Lluís",
+  "license": "MIT",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}
