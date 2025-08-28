@@ -21,10 +21,14 @@ class UIComponents {
             avgPlatesPerMember: document.getElementById('avgPlatesPerMember')
         };
 
-        if (elements.totalRecords) elements.totalRecords.textContent = stats.totalRecords.toLocaleString();
-        if (elements.totalMembers) elements.totalMembers.textContent = stats.totalMembers.toLocaleString();
-        if (elements.totalPlates) elements.totalPlates.textContent = stats.totalPlates.toLocaleString();
-        if (elements.avgPlatesPerMember) elements.avgPlatesPerMember.textContent = stats.avgPlatesPerMember;
+        // Mapear las propiedades del nuevo formato de stats
+        if (elements.totalRecords) elements.totalRecords.textContent = stats.totalMatriculas.toLocaleString();
+        if (elements.totalMembers) elements.totalMembers.textContent = stats.totalSocios.toLocaleString();
+        if (elements.totalPlates) elements.totalPlates.textContent = stats.totalMatriculas.toLocaleString();
+        
+        // Calcular promedio de matrículas por socio
+        const avgPlates = stats.totalSocios > 0 ? (stats.totalMatriculas / stats.totalSocios).toFixed(1) : '0';
+        if (elements.avgPlatesPerMember) elements.avgPlatesPerMember.textContent = avgPlates;
     }
 
     /**
@@ -51,17 +55,27 @@ class UIComponents {
 
         tbody.innerHTML = pageData.map(row => `
             <tr>
-                <td>${this.escapeHtml(row.member)}</td>
-                <td>${row.platesCount}</td>
+                <td>${this.escapeHtml(row.socio || row.member)}</td>
                 <td>
-                    <div class="plates-list">
-                        ${row.plates.map(plate => `<span class="plate-badge">${plate}</span>`).join('')}
+                    <div class="matriculas-count">
+                        <span class="total">${row.matriculas ? row.matriculas.length : (row.platesCount || 0)}</span>
+                        ${row.temporales !== undefined ? `
+                            <div class="tipo-breakdown">
+                                <span class="matricula-badge matricula-temporal">T: ${row.temporales}</span>
+                                <span class="matricula-badge matricula-permanente">P: ${row.permanentes}</span>
+                            </div>
+                        ` : ''}
                     </div>
                 </td>
-                <td>${row.dateRange}</td>
                 <td>
-                    <span class="status-badge status-${row.status}">
-                        ${row.status === 'active' ? '✅ Activo' : '❌ Expirado'}
+                    <div class="plates-list">
+                        ${this.renderMatriculasList(row)}
+                    </div>
+                </td>
+                <td>${this.formatDateRange(row)}</td>
+                <td>
+                    <span class="status-badge status-${this.getRowStatus(row)}">
+                        ${this.getStatusText(row)}
                     </span>
                 </td>
             </tr>
@@ -69,6 +83,109 @@ class UIComponents {
 
         // Añadir estilos para las matrículas si no existen
         this.addPlateStyles();
+    }
+
+    /**
+     * Renderiza la lista de matrículas con sus tipos
+     * @param {Object} row - Fila de datos
+     * @returns {string} HTML de la lista de matrículas
+     */
+    renderMatriculasList(row) {
+        if (row.matriculas && Array.isArray(row.matriculas)) {
+            return row.matriculas.map(matricula => 
+                `<span class="plate-badge ${matricula.tipoMatricula ? `plate-${matricula.tipoMatricula}` : ''}" title="${this.getMatriculaTooltip(matricula)}">
+                    <span class="tipo-indicator ${matricula.tipoMatricula || 'unknown'}"></span>
+                    ${matricula.matricula}
+                </span>`
+            ).join('');
+        } else if (row.plates && Array.isArray(row.plates)) {
+            return row.plates.map(plate => 
+                `<span class="plate-badge">${plate}</span>`
+            ).join('');
+        } else if (row.matriculasDetalle && Array.isArray(row.matriculasDetalle)) {
+            return row.matriculasDetalle.map(matricula => 
+                `<span class="plate-badge ${matricula.tipoMatricula ? `plate-${matricula.tipoMatricula}` : ''}" title="${this.getMatriculaTooltip(matricula)}">
+                    <span class="tipo-indicator ${matricula.tipoMatricula || 'unknown'}"></span>
+                    ${matricula.matricula}
+                </span>`
+            ).join('');
+        }
+        return '';
+    }
+
+    /**
+     * Genera tooltip para una matrícula
+     * @param {Object} matricula - Datos de la matrícula
+     * @returns {string} Texto del tooltip
+     */
+    getMatriculaTooltip(matricula) {
+        const parts = [];
+        if (matricula.tipoMatricula) {
+            parts.push(`Tipo: ${matricula.tipoMatricula}`);
+        }
+        if (matricula.fechaInicio) {
+            parts.push(`Inicio: ${matricula.fechaInicio.toLocaleDateString('es-ES')}`);
+        }
+        if (matricula.fechaFin) {
+            parts.push(`Fin: ${matricula.fechaFin.toLocaleDateString('es-ES')}`);
+        }
+        if (matricula.usuario) {
+            parts.push(`Usuario: ${matricula.usuario}`);
+        }
+        return parts.join(' | ');
+    }
+
+    /**
+     * Formatea el rango de fechas
+     * @param {Object} row - Fila de datos
+     * @returns {string} Rango de fechas formateado
+     */
+    formatDateRange(row) {
+        if (row.dateRange) {
+            return row.dateRange;
+        }
+        if (row.fechaUltimoRegistro) {
+            return `Último: ${row.fechaUltimoRegistro.toLocaleDateString('es-ES')}`;
+        }
+        return 'Sin fecha';
+    }
+
+    /**
+     * Obtiene el estado de la fila
+     * @param {Object} row - Fila de datos
+     * @returns {string} Estado de la fila
+     */
+    getRowStatus(row) {
+        if (row.status) {
+            return row.status;
+        }
+        if (row.matriculas && row.matriculas.some(m => this.isMatriculaActive(m))) {
+            return 'active';
+        }
+        return 'expired';
+    }
+
+    /**
+     * Obtiene el texto del estado
+     * @param {Object} row - Fila de datos
+     * @returns {string} Texto del estado
+     */
+    getStatusText(row) {
+        const status = this.getRowStatus(row);
+        return status === 'active' ? '✅ Activo' : '❌ Expirado';
+    }
+
+    /**
+     * Verifica si una matrícula está activa
+     * @param {Object} matricula - Datos de la matrícula
+     * @returns {boolean} True si está activa
+     */
+    isMatriculaActive(matricula) {
+        const now = new Date();
+        if (!matricula.fechaFin) {
+            return true; // Permanente sin fecha de fin
+        }
+        return matricula.fechaFin >= now;
     }
 
     /**

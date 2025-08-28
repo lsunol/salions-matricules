@@ -4,7 +4,9 @@
     --primary-hover: #1d4ed8;
     --secondary-color: #64748b;
     --success-color: #059669;
+    --success-bg: #dcfce7;
     --warning-color: #d97706;
+    --warning-bg: #fef3c7;
     --danger-color: #dc2626;
     --background: #f8fafc;
     --surface: #ffffff;
@@ -409,4 +411,53 @@ section h2 {
 
 .text-warning {
     color: var(--warning-color);
+}
+
+/* Estilos para tipos de matrícula */
+.matricula-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.matricula-temporal {
+    background-color: var(--warning-bg);
+    color: var(--warning-color);
+    border: 1px solid var(--warning-color);
+}
+
+.matricula-permanente {
+    background-color: var(--success-bg);
+    color: var(--success-color);
+    border: 1px solid var(--success-color);
+}
+
+/* Filas con fondo de color según tipo */
+.table-row-temporal {
+    background-color: var(--warning-bg) !important;
+}
+
+.table-row-permanente {
+    background-color: var(--success-bg) !important;
+}
+
+/* Indicadores visuales adicionales */
+.tipo-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.tipo-indicator.temporal {
+    background-color: var(--warning-color);
+}
+
+.tipo-indicator.permanente {
+    background-color: var(--success-color);
 }

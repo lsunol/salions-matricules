@@ -311,23 +311,6 @@ class DataAnalyzer {
     }
 
     /**
-     * Obtiene los datos agrupados por socio
-     * @returns {Array} Array de socios con sus matrículas
-     */
-    getGroupedBySocio() {
-        return Array.from(this.groupedData.values())
-            .map(group => ({
-                socio: group.socio,
-                matriculas: group.matriculas,
-                totalMatriculas: group.matriculas.length,
-                temporales: group.temporales,
-                permanentes: group.permanentes,
-                fechaUltimoRegistro: group.fechaUltimoRegistro
-            }))
-            .sort((a, b) => b.totalMatriculas - a.totalMatriculas);
-    }
-
-    /**
      * Exporta datos filtrados a CSV
      * @param {Array} filteredData - Datos filtrados
      * @returns {string} CSV string

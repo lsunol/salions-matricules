@@ -119,7 +119,7 @@ class SalionsApp {
                 this.ui.showNotification(`Archivo procesado exitosamente: ${parseResult.validRecords} registros`, 'success');
             }
 
-            // Analizar datos
+            // Analizar datos con la nueva estructura
             this.analyzeData(parseResult.data);
             
         } catch (error) {
@@ -204,12 +204,12 @@ class SalionsApp {
      */
     analyzeData(data) {
         try {
-            // Cargar datos en el analizador
-            this.dataAnalyzer.loadData(data);
+            // Crear analizador con los datos
+            this.dataAnalyzer = new DataAnalyzer(data);
             this.currentData = data;
 
             // Obtener estadísticas generales
-            const stats = this.dataAnalyzer.getGeneralStats();
+            const stats = this.dataAnalyzer.getStats();
             
             // Actualizar UI
             this.ui.updateSummaryCards(stats);
@@ -267,7 +267,33 @@ class SalionsApp {
 
         try {
             const filters = this.getCurrentFilters();
-            const filteredData = this.dataAnalyzer.applyFilters(filters);
+            let filteredData;
+
+            // Si hay filtro por tipo de matrícula específico
+            if (filters.matriculaType && filters.matriculaType !== 'all') {
+                filteredData = this.dataAnalyzer.filterSociosByMatriculaType(
+                    filters.matriculaType, 
+                    filters.dateRangeDays
+                );
+            } else if (filters.dateRangeDays) {
+                // Filtrar por período de tiempo
+                filteredData = this.dataAnalyzer.filterSociosByRegistrationPeriod(
+                    filters.dateRangeDays, 
+                    filters.minPlates
+                );
+            } else {
+                // Obtener todos los socios agrupados y filtrar por mínimo de matrículas
+                filteredData = this.dataAnalyzer.getGroupedBySocio()
+                    .filter(group => {
+                        const totalMatriculas = group.matriculas ? group.matriculas.length : 
+                                              (group.totalMatriculas || 0);
+                        return totalMatriculas >= filters.minPlates;
+                    })
+                    .map(group => ({
+                        ...group,
+                        matriculasDetalle: group.matriculas || []
+                    }));
+            }
             
             this.ui.renderTable(filteredData);
             
@@ -293,11 +319,13 @@ class SalionsApp {
         const platesThreshold = document.getElementById('platesThreshold');
         const dateRange = document.getElementById('dateRange');
         const seasonFilter = document.getElementById('seasonFilter');
+        const matriculaTypeFilter = document.getElementById('matriculaTypeFilter');
 
         return {
             minPlates: platesThreshold ? parseInt(platesThreshold.value) || 1 : 1,
             dateRangeDays: dateRange && dateRange.value !== 'all' ? parseInt(dateRange.value) : null,
-            season: seasonFilter ? seasonFilter.value : 'all'
+            season: seasonFilter ? seasonFilter.value : 'all',
+            matriculaType: matriculaTypeFilter ? matriculaTypeFilter.value : 'all'
         };
     }
 
