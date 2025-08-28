@@ -272,10 +272,21 @@ section h2 {
     cursor: pointer;
     user-select: none;
     transition: background-color 0.3s ease;
+    position: relative;
 }
 
 .results-table th:hover {
     background-color: #e2e8f0;
+}
+
+/* Mejoras para tooltips en encabezados */
+.results-table th[title] {
+    cursor: help;
+}
+
+.results-table th[title]:hover {
+    background-color: #ddd6fe;
+    border-color: var(--primary-color);
 }
 
 /* Estilos para encabezados de tabla mejorados */
