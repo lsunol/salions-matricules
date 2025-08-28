@@ -3,10 +3,13 @@
  */
 class UIComponents {
     constructor() {
-        this.currentSort = { column: null, direction: 'asc' };
+        this.currentSort = { column: 'totalMatriculas', direction: 'desc' };
         this.currentPage = 1;
         this.itemsPerPage = 20;
         this.filteredData = [];
+        
+        // Exponer la instancia globalmente para los event handlers
+        window.uiComponents = this;
     }
 
     /**
@@ -38,8 +41,15 @@ class UIComponents {
     renderTable(data) {
         this.filteredData = data;
         this.currentPage = 1;
+        
+        // Aplicar ordenación inicial si hay datos
+        if (this.filteredData.length > 0) {
+            this.sortTableData();
+        }
+        
         this.renderCurrentPage();
         this.updatePagination();
+        this.updateSortIndicators();
     }
 
     /**
@@ -111,26 +121,338 @@ class UIComponents {
      * @returns {string} HTML de la lista de matrículas
      */
     renderMatriculasList(row) {
+        let matriculas = [];
+        
         if (row.matriculas && Array.isArray(row.matriculas)) {
-            return row.matriculas.map(matricula => 
-                `<span class="plate-badge ${matricula.tipoMatricula ? `plate-${matricula.tipoMatricula}` : ''}" title="${this.getMatriculaTooltip(matricula)}">
-                    <span class="tipo-indicator ${matricula.tipoMatricula || 'unknown'}"></span>
-                    ${matricula.matricula}
-                </span>`
-            ).join('');
+            matriculas = row.matriculas;
         } else if (row.plates && Array.isArray(row.plates)) {
-            return row.plates.map(plate => 
-                `<span class="plate-badge">${plate}</span>`
-            ).join('');
+            matriculas = row.plates.map(plate => ({ matricula: plate }));
         } else if (row.matriculasDetalle && Array.isArray(row.matriculasDetalle)) {
-            return row.matriculasDetalle.map(matricula => 
-                `<span class="plate-badge ${matricula.tipoMatricula ? `plate-${matricula.tipoMatricula}` : ''}" title="${this.getMatriculaTooltip(matricula)}">
-                    <span class="tipo-indicator ${matricula.tipoMatricula || 'unknown'}"></span>
-                    ${matricula.matricula}
-                </span>`
-            ).join('');
+            matriculas = row.matriculasDetalle;
         }
-        return '';
+        
+        if (matriculas.length === 0) return '';
+        
+        const maxVisible = 5; // Mostrar solo 5 matrículas
+        const visibleMatriculas = matriculas.slice(0, maxVisible);
+        const totalMatriculas = matriculas.length;
+        const rowId = this.generateRowId(row);
+        
+        // Renderizar matrículas visibles
+        const visibleHtml = visibleMatriculas.map(matricula => 
+            this.renderSinglePlate(matricula)
+        ).join('');
+        
+        // Botón para ver todas en modal
+        const viewAllButton = totalMatriculas > maxVisible ? `
+            <button class="view-all-plates-btn" onclick="window.uiComponents.showPlatesModal('${rowId}', '${this.escapeForAttribute(row.socio || row.member)}')" 
+                    title="Ver todas las ${totalMatriculas} matrículas">
+                👁️ Ver todas (${totalMatriculas})
+            </button>
+        ` : '';
+        
+        // Guardar los datos para el modal
+        if (!window.platesData) window.platesData = {};
+        window.platesData[rowId] = matriculas;
+        
+        return `
+            <div class="plates-preview">
+                ${visibleHtml}
+                ${viewAllButton}
+            </div>
+        `;
+    }
+
+    /**
+     * Renderiza una matrícula individual
+     * @param {Object} matricula - Datos de la matrícula
+     * @returns {string} HTML de la matrícula
+     */
+    renderSinglePlate(matricula) {
+        const plateData = typeof matricula === 'string' ? { matricula } : matricula;
+        const tipoClass = plateData.tipoMatricula ? `plate-${plateData.tipoMatricula}` : '';
+        const tooltip = this.getMatriculaTooltip(plateData);
+        
+        return `<span class="plate-badge ${tipoClass}" title="${tooltip}">
+            <span class="tipo-indicator ${plateData.tipoMatricula || 'unknown'}"></span>
+            ${plateData.matricula}
+        </span>`;
+    }
+
+    /**
+     * Genera un ID único para la fila
+     * @param {Object} row - Datos de la fila
+     * @returns {string} ID único
+     */
+    generateRowId(row) {
+        const socio = (row.socio || row.member || 'unknown').replace(/[^a-zA-Z0-9]/g, '');
+        const hash = Math.abs(this.simpleHash(socio + (row.totalMatriculas || 0)));
+        return `row-${hash}`;
+    }
+
+    /**
+     * Función hash simple para generar IDs únicos
+     * @param {string} str - Cadena a convertir en hash
+     * @returns {number} Hash numérico
+     */
+    simpleHash(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convertir a 32bit integer
+        }
+        return hash;
+    }
+
+    /**
+     * Escapa texto para usar como atributo HTML
+     * @param {string} text - Texto a escapar
+     * @returns {string} Texto escapado
+     */
+    escapeForAttribute(text) {
+        return (text || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+    }
+
+    /**
+     * Muestra modal con todas las matrículas del socio
+     * @param {string} rowId - ID de la fila
+     * @param {string} socioName - Nombre del socio
+     */
+    showPlatesModal(rowId, socioName) {
+        const matriculas = window.platesData?.[rowId] || [];
+        if (matriculas.length === 0) return;
+        
+        // Ordenar matrículas: primero permanentes, luego temporales, por fecha de inicio
+        const sortedMatriculas = [...matriculas].sort((a, b) => {
+            // Primero por tipo: permanentes primero
+            const tipoA = a.tipoMatricula || 'unknown';
+            const tipoB = b.tipoMatricula || 'unknown';
+            
+            if (tipoA === 'permanente' && tipoB !== 'permanente') return -1;
+            if (tipoA !== 'permanente' && tipoB === 'permanente') return 1;
+            
+            // Dentro del mismo tipo, ordenar por fecha de inicio
+            const fechaA = a.fechaInicio || new Date(0);
+            const fechaB = b.fechaInicio || new Date(0);
+            
+            return fechaB - fechaA; // Más recientes primero
+        });
+        
+        // Agrupar por tipo para mostrar
+        const permanentes = sortedMatriculas.filter(m => m.tipoMatricula === 'permanente');
+        const temporales = sortedMatriculas.filter(m => m.tipoMatricula === 'temporal' || !m.tipoMatricula);
+        
+        const content = `
+            <div class="plates-modal-content">
+                <div class="plates-summary">
+                    <p><strong>Total:</strong> ${matriculas.length} matrículas</p>
+                    <p><strong>Permanentes:</strong> ${permanentes.length} | <strong>Temporales:</strong> ${temporales.length}</p>
+                </div>
+                
+                ${permanentes.length > 0 ? `
+                    <div class="plates-section">
+                        <h4 class="section-title">🟢 Matrículas Permanentes (${permanentes.length})</h4>
+                        <div class="plates-grid">
+                            ${permanentes.map(m => this.renderDetailedPlate(m)).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                ${temporales.length > 0 ? `
+                    <div class="plates-section">
+                        <h4 class="section-title">🟡 Matrículas Temporales (${temporales.length})</h4>
+                        <div class="plates-grid">
+                            ${temporales.map(m => this.renderDetailedPlate(m)).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="plates-actions">
+                    <button class="copy-plates-btn" onclick="window.uiComponents.copyPlatestoClipboard('${rowId}')">
+                        📋 Copiar lista al portapapeles
+                    </button>
+                </div>
+            </div>
+            
+            <style>
+                .plates-modal-content {
+                    max-width: 800px;
+                    max-height: 70vh;
+                    overflow-y: auto;
+                }
+                .plates-summary {
+                    background: #f8fafc;
+                    padding: 1rem;
+                    border-radius: 0.5rem;
+                    margin-bottom: 1.5rem;
+                    border-left: 4px solid #3b82f6;
+                }
+                .plates-summary p {
+                    margin: 0.5rem 0;
+                    color: #374151;
+                }
+                .plates-section {
+                    margin-bottom: 2rem;
+                }
+                .section-title {
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    margin-bottom: 1rem;
+                    padding-bottom: 0.5rem;
+                    border-bottom: 2px solid #e5e7eb;
+                    color: #374151;
+                }
+                .plates-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                    gap: 0.75rem;
+                }
+                .detailed-plate {
+                    background: white;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 0.5rem;
+                    padding: 0.75rem;
+                    transition: all 0.2s ease;
+                }
+                .detailed-plate:hover {
+                    border-color: #3b82f6;
+                    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+                }
+                .plate-header {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-bottom: 0.5rem;
+                }
+                .plate-number {
+                    font-family: monospace;
+                    font-weight: 700;
+                    font-size: 1rem;
+                    color: #1f2937;
+                }
+                .plate-type-badge {
+                    padding: 0.125rem 0.5rem;
+                    border-radius: 1rem;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                }
+                .plate-type-permanente {
+                    background: #dcfce7;
+                    color: #166534;
+                }
+                .plate-type-temporal {
+                    background: #fef3c7;
+                    color: #92400e;
+                }
+                .plate-details {
+                    font-size: 0.875rem;
+                    color: #6b7280;
+                    line-height: 1.4;
+                }
+                .plates-actions {
+                    margin-top: 2rem;
+                    padding-top: 1rem;
+                    border-top: 1px solid #e5e7eb;
+                    text-align: center;
+                }
+                .copy-plates-btn {
+                    background: linear-gradient(135deg, #10b981, #059669);
+                    color: white;
+                    border: none;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 0.5rem;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                .copy-plates-btn:hover {
+                    background: linear-gradient(135deg, #059669, #047857);
+                    transform: translateY(-1px);
+                }
+            </style>
+        `;
+        
+        this.showModal(`Matrículas de ${socioName}`, content);
+    }
+
+    /**
+     * Renderiza una matrícula con detalles completos
+     * @param {Object} matricula - Datos de la matrícula
+     * @returns {string} HTML de la matrícula detallada
+     */
+    renderDetailedPlate(matricula) {
+        const tipoClass = matricula.tipoMatricula === 'permanente' ? 'plate-type-permanente' : 'plate-type-temporal';
+        const tipoText = matricula.tipoMatricula === 'permanente' ? 'Permanente' : 'Temporal';
+        
+        const fechaInicio = matricula.fechaInicio ? matricula.fechaInicio.toLocaleDateString('es-ES') : 'No especificada';
+        const fechaFin = matricula.fechaFin ? matricula.fechaFin.toLocaleDateString('es-ES') : 'Sin límite';
+        const usuario = matricula.usuario || 'No especificado';
+        
+        return `
+            <div class="detailed-plate">
+                <div class="plate-header">
+                    <span class="plate-number">${matricula.matricula}</span>
+                    <span class="plate-type-badge ${tipoClass}">${tipoText}</span>
+                </div>
+                <div class="plate-details">
+                    <div><strong>Inicio:</strong> ${fechaInicio}</div>
+                    <div><strong>Fin:</strong> ${fechaFin}</div>
+                    <div><strong>Usuario:</strong> ${usuario}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * Copia la lista de matrículas al portapapeles
+     * @param {string} rowId - ID de la fila
+     */
+    async copyPlatestoClipboard(rowId) {
+        const matriculas = window.platesData?.[rowId] || [];
+        if (matriculas.length === 0) return;
+        
+        // Crear texto para copiar
+        const permanentes = matriculas.filter(m => m.tipoMatricula === 'permanente');
+        const temporales = matriculas.filter(m => m.tipoMatricula === 'temporal' || !m.tipoMatricula);
+        
+        let texto = `Lista de Matrículas (Total: ${matriculas.length})\n`;
+        texto += `Permanentes: ${permanentes.length} | Temporales: ${temporales.length}\n\n`;
+        
+        if (permanentes.length > 0) {
+            texto += `MATRÍCULAS PERMANENTES (${permanentes.length}):\n`;
+            texto += `${'='.repeat(40)}\n`;
+            permanentes.forEach(m => {
+                const inicio = m.fechaInicio ? m.fechaInicio.toLocaleDateString('es-ES') : 'No especificada';
+                const fin = m.fechaFin ? m.fechaFin.toLocaleDateString('es-ES') : 'Sin límite';
+                texto += `${m.matricula} | Inicio: ${inicio} | Fin: ${fin}\n`;
+            });
+            texto += '\n';
+        }
+        
+        if (temporales.length > 0) {
+            texto += `MATRÍCULAS TEMPORALES (${temporales.length}):\n`;
+            texto += `${'='.repeat(40)}\n`;
+            temporales.forEach(m => {
+                const inicio = m.fechaInicio ? m.fechaInicio.toLocaleDateString('es-ES') : 'No especificada';
+                const fin = m.fechaFin ? m.fechaFin.toLocaleDateString('es-ES') : 'Sin límite';
+                texto += `${m.matricula} | Inicio: ${inicio} | Fin: ${fin}\n`;
+            });
+        }
+        
+        try {
+            await navigator.clipboard.writeText(texto);
+            this.showNotification('Lista copiada al portapapeles', 'success', 2000);
+        } catch (err) {
+            // Fallback para navegadores que no soportan clipboard API
+            const textArea = document.createElement('textarea');
+            textArea.value = texto;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            this.showNotification('Lista copiada al portapapeles', 'success', 2000);
+        }
     }
 
     /**
@@ -168,9 +490,8 @@ class UIComponents {
         
         return `
             <div class="seasonal-freq">
-                <span class="freq-summer" title="Promedio mensual en verano">${verano} ☀️</span>
-                <span class="freq-divider">/</span>
-                <span class="freq-winter" title="Promedio mensual en invierno">${invierno} ❄️</span>
+                <div class="freq-winter" title="Promedio mensual en invierno">${invierno} ❄️</div>
+                <div class="freq-summer" title="Promedio mensual en verano">${verano} ☀️</div>
             </div>
         `;
     }
@@ -236,6 +557,12 @@ class UIComponents {
             const style = document.createElement('style');
             style.id = 'dynamic-plate-styles';
             style.textContent = `
+                .plates-preview {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    gap: 0.25rem;
+                }
                 .plates-list {
                     display: flex;
                     flex-wrap: wrap;
@@ -249,6 +576,28 @@ class UIComponents {
                     font-size: 0.75rem;
                     font-family: monospace;
                     font-weight: 600;
+                    white-space: nowrap;
+                }
+                .view-all-plates-btn {
+                    background: linear-gradient(135deg, #6366f1, #4f46e5);
+                    color: white;
+                    border: none;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.375rem;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    white-space: nowrap;
+                    margin-left: 0.25rem;
+                }
+                .view-all-plates-btn:hover {
+                    background: linear-gradient(135deg, #4f46e5, #4338ca);
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+                }
+                .view-all-plates-btn:active {
+                    transform: translateY(0);
                 }
             `;
             document.head.appendChild(style);
@@ -285,9 +634,11 @@ class UIComponents {
                 }
                 .seasonal-freq {
                     display: flex;
+                    flex-direction: column;
                     align-items: center;
-                    gap: 0.25rem;
+                    gap: 0.125rem;
                     font-size: 0.875rem;
+                    line-height: 1.2;
                 }
                 .freq-summer {
                     color: #ea580c;
@@ -297,12 +648,9 @@ class UIComponents {
                     color: #0ea5e9;
                     font-weight: 600;
                 }
-                .freq-divider {
-                    color: #6b7280;
-                    font-weight: 400;
-                }
                 .frequency-seasonal {
-                    min-width: 5rem;
+                    min-width: 3rem;
+                    text-align: center;
                 }
                 .matriculas-count {
                     text-align: center;
@@ -344,6 +692,9 @@ class UIComponents {
                 this.sortTable(column);
             });
         });
+        
+        // Inicializar indicadores por primera vez
+        this.updateSortIndicators();
     }
 
     /**
@@ -442,20 +793,77 @@ class UIComponents {
     }
 
     /**
+     * Aplica la ordenación actual a los datos sin cambiar la configuración
+     */
+    sortTableData() {
+        if (!this.currentSort.column) return;
+        
+        this.filteredData.sort((a, b) => {
+            let valueA, valueB;
+
+            switch (this.currentSort.column) {
+                case 'socio':
+                    valueA = (a.socio || a.member || '').toLowerCase();
+                    valueB = (b.socio || b.member || '').toLowerCase();
+                    break;
+                case 'totalMatriculas':
+                    valueA = a.totalMatriculas || (a.matriculas ? a.matriculas.length : 0);
+                    valueB = b.totalMatriculas || (b.matriculas ? b.matriculas.length : 0);
+                    break;
+                case 'diasPromedioPermiso':
+                    valueA = a.diasPromedioPermiso || 0;
+                    valueB = b.diasPromedioPermiso || 0;
+                    break;
+                case 'frecuenciaEstacional':
+                    valueA = (a.frecuenciaEstacional?.verano || 0) + (a.frecuenciaEstacional?.invierno || 0);
+                    valueB = (b.frecuenciaEstacional?.verano || 0) + (b.frecuenciaEstacional?.invierno || 0);
+                    break;
+                case 'permisosCortos':
+                    valueA = a.permisosCortos || 0;
+                    valueB = b.permisosCortos || 0;
+                    break;
+                case 'solapamientos':
+                    valueA = a.solapamientos || 0;
+                    valueB = b.solapamientos || 0;
+                    break;
+                case 'picoSimultaneo':
+                    valueA = a.picoSimultaneo || 0;
+                    valueB = b.picoSimultaneo || 0;
+                    break;
+                case 'matriculas':
+                    valueA = a.matriculas ? a.matriculas.length : 0;
+                    valueB = b.matriculas ? b.matriculas.length : 0;
+                    break;
+                default:
+                    valueA = a[this.currentSort.column] || 0;
+                    valueB = b[this.currentSort.column] || 0;
+            }
+
+            let comparison = 0;
+            if (valueA > valueB) comparison = 1;
+            if (valueA < valueB) comparison = -1;
+
+            return this.currentSort.direction === 'desc' ? -comparison : comparison;
+        });
+    }
+
+    /**
      * Actualiza los indicadores visuales de ordenación
      */
     updateSortIndicators() {
-        // Limpiar todos los indicadores
+        // Establecer iconos por defecto para todas las columnas
         document.querySelectorAll('.sort-indicator').forEach(indicator => {
             indicator.classList.remove('active');
-            indicator.textContent = '';
+            indicator.textContent = '⇅'; // Icono de ordenación por defecto
         });
 
         // Añadir indicador a la columna activa
-        const activeHeader = document.querySelector(`th[data-sort="${this.currentSort.column}"] .sort-indicator`);
-        if (activeHeader) {
-            activeHeader.classList.add('active');
-            activeHeader.textContent = this.currentSort.direction === 'asc' ? '↑' : '↓';
+        if (this.currentSort.column) {
+            const activeHeader = document.querySelector(`th[data-sort="${this.currentSort.column}"] .sort-indicator`);
+            if (activeHeader) {
+                activeHeader.classList.add('active');
+                activeHeader.textContent = this.currentSort.direction === 'asc' ? '↑' : '↓';
+            }
         }
     }
 
