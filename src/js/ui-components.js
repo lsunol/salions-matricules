@@ -58,31 +58,51 @@ class UIComponents {
                 <td>${this.escapeHtml(row.socio || row.member)}</td>
                 <td>
                     <div class="matriculas-count">
-                        <span class="total">${row.matriculas ? row.matriculas.length : (row.platesCount || 0)}</span>
+                        <span class="total">${row.totalMatriculas || (row.matriculas ? row.matriculas.length : 0)}</span>
                         ${row.temporales !== undefined ? `
                             <div class="tipo-breakdown">
-                                <span class="matricula-badge matricula-temporal">T: ${row.temporales}</span>
-                                <span class="matricula-badge matricula-permanente">P: ${row.permanentes}</span>
+                                <span class="matricula-badge matricula-temporal">T:${row.temporales}</span>
+                                <span class="matricula-badge matricula-permanente">P:${row.permanentes}</span>
                             </div>
                         ` : ''}
                     </div>
+                </td>
+                <td>
+                    <span class="metric-value" title="Días promedio de permisos temporales">
+                        ${row.diasPromedioPermiso ? `${row.diasPromedioPermiso}d` : '-'}
+                    </span>
+                </td>
+                <td>
+                    <div class="frequency-seasonal" title="Frecuencia mensual: Verano ☀️ / Invierno ❄️">
+                        ${this.formatSeasonalFrequency(row.frecuenciaEstacional)}
+                    </div>
+                </td>
+                <td>
+                    <span class="metric-badge ${row.permisosCortos > 5 ? 'metric-warning' : ''}" title="Permisos de 7 días o menos">
+                        ${row.permisosCortos || 0}
+                    </span>
+                </td>
+                <td>
+                    <span class="metric-badge ${row.solapamientos > 3 ? 'metric-warning' : ''}" title="Solapamientos de matrículas activas">
+                        ${row.solapamientos || 0}
+                    </span>
+                </td>
+                <td>
+                    <span class="metric-badge ${row.picoSimultaneo > 4 ? 'metric-warning' : ''}" title="Máximo de matrículas activas simultáneamente">
+                        ${row.picoSimultaneo || 0}
+                    </span>
                 </td>
                 <td>
                     <div class="plates-list">
                         ${this.renderMatriculasList(row)}
                     </div>
                 </td>
-                <td>${this.formatDateRange(row)}</td>
-                <td>
-                    <span class="status-badge status-${this.getRowStatus(row)}">
-                        ${this.getStatusText(row)}
-                    </span>
-                </td>
             </tr>
         `).join('');
 
         // Añadir estilos para las matrículas si no existen
         this.addPlateStyles();
+        this.addMetricStyles();
     }
 
     /**
@@ -133,6 +153,26 @@ class UIComponents {
             parts.push(`Usuario: ${matricula.usuario}`);
         }
         return parts.join(' | ');
+    }
+
+    /**
+     * Formatea la frecuencia estacional
+     * @param {Object} frecuencia - Objeto con frecuencias de verano e invierno
+     * @returns {string} Frecuencia formateada
+     */
+    formatSeasonalFrequency(frecuencia) {
+        if (!frecuencia) return '-';
+        
+        const verano = frecuencia.verano || 0;
+        const invierno = frecuencia.invierno || 0;
+        
+        return `
+            <div class="seasonal-freq">
+                <span class="freq-summer" title="Promedio mensual en verano">${verano} ☀️</span>
+                <span class="freq-divider">/</span>
+                <span class="freq-winter" title="Promedio mensual en invierno">${invierno} ❄️</span>
+            </div>
+        `;
     }
 
     /**
@@ -216,6 +256,83 @@ class UIComponents {
     }
 
     /**
+     * Añade estilos CSS para las métricas dinámicamente
+     */
+    addMetricStyles() {
+        if (!document.getElementById('metric-styles')) {
+            const style = document.createElement('style');
+            style.id = 'metric-styles';
+            style.textContent = `
+                .metric-value {
+                    font-weight: 600;
+                    color: #374151;
+                }
+                .metric-badge {
+                    display: inline-block;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.375rem;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    background-color: #f3f4f6;
+                    color: #374151;
+                    text-align: center;
+                    min-width: 2rem;
+                }
+                .metric-badge.metric-warning {
+                    background-color: #fef3c7;
+                    color: #92400e;
+                    border: 1px solid #fed7aa;
+                }
+                .seasonal-freq {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                    font-size: 0.875rem;
+                }
+                .freq-summer {
+                    color: #ea580c;
+                    font-weight: 600;
+                }
+                .freq-winter {
+                    color: #0ea5e9;
+                    font-weight: 600;
+                }
+                .freq-divider {
+                    color: #6b7280;
+                    font-weight: 400;
+                }
+                .frequency-seasonal {
+                    min-width: 5rem;
+                }
+                .matriculas-count {
+                    text-align: center;
+                }
+                .tipo-breakdown {
+                    display: flex;
+                    gap: 0.25rem;
+                    justify-content: center;
+                    margin-top: 0.25rem;
+                }
+                .matricula-badge {
+                    font-size: 0.75rem;
+                    padding: 0.125rem 0.25rem;
+                    border-radius: 0.25rem;
+                    font-weight: 500;
+                }
+                .matricula-temporal {
+                    background-color: var(--warning-bg, #fef3c7);
+                    color: #92400e;
+                }
+                .matricula-permanente {
+                    background-color: var(--success-bg, #dcfce7);
+                    color: #166534;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
+    /**
      * Configura el sistema de ordenación de la tabla
      */
     setupTableSorting() {
@@ -247,30 +364,65 @@ class UIComponents {
             let valueA, valueB;
 
             switch (column) {
+                case 'socio':
+                    valueA = (a.socio || a.member || '').toLowerCase();
+                    valueB = (b.socio || b.member || '').toLowerCase();
+                    break;
+                case 'totalMatriculas':
+                    valueA = a.totalMatriculas || (a.matriculas ? a.matriculas.length : 0);
+                    valueB = b.totalMatriculas || (b.matriculas ? b.matriculas.length : 0);
+                    break;
+                case 'diasPromedioPermiso':
+                    valueA = a.diasPromedioPermiso || 0;
+                    valueB = b.diasPromedioPermiso || 0;
+                    break;
+                case 'frecuenciaEstacional':
+                    // Ordenar por la suma de verano + invierno
+                    valueA = (a.frecuenciaEstacional?.verano || 0) + (a.frecuenciaEstacional?.invierno || 0);
+                    valueB = (b.frecuenciaEstacional?.verano || 0) + (b.frecuenciaEstacional?.invierno || 0);
+                    break;
+                case 'permisosCortos':
+                    valueA = a.permisosCortos || 0;
+                    valueB = b.permisosCortos || 0;
+                    break;
+                case 'solapamientos':
+                    valueA = a.solapamientos || 0;
+                    valueB = b.solapamientos || 0;
+                    break;
+                case 'picoSimultaneo':
+                    valueA = a.picoSimultaneo || 0;
+                    valueB = b.picoSimultaneo || 0;
+                    break;
+                case 'matriculas':
+                    // Ordenar por número de matrículas
+                    valueA = a.matriculas ? a.matriculas.length : 0;
+                    valueB = b.matriculas ? b.matriculas.length : 0;
+                    break;
+                // Columnas antiguas para retrocompatibilidad
                 case 'member':
-                    valueA = a.member.toLowerCase();
-                    valueB = b.member.toLowerCase();
+                    valueA = a.member?.toLowerCase() || '';
+                    valueB = b.member?.toLowerCase() || '';
                     break;
                 case 'platesCount':
-                    valueA = a.platesCount;
-                    valueB = b.platesCount;
+                    valueA = a.platesCount || 0;
+                    valueB = b.platesCount || 0;
                     break;
                 case 'plates':
-                    valueA = a.plates.join(',').toLowerCase();
-                    valueB = b.plates.join(',').toLowerCase();
+                    valueA = a.plates ? a.plates.join(',').toLowerCase() : '';
+                    valueB = b.plates ? b.plates.join(',').toLowerCase() : '';
                     break;
                 case 'dateRange':
                     // Ordenar por fecha de inicio más temprana
-                    valueA = a.records[0]?.fechaInicio || new Date(0);
-                    valueB = b.records[0]?.fechaInicio || new Date(0);
+                    valueA = a.records?.[0]?.fechaInicio || new Date(0);
+                    valueB = b.records?.[0]?.fechaInicio || new Date(0);
                     break;
                 case 'status':
-                    valueA = a.status;
-                    valueB = b.status;
+                    valueA = a.status || '';
+                    valueB = b.status || '';
                     break;
                 default:
-                    valueA = a[column];
-                    valueB = b[column];
+                    valueA = a[column] || 0;
+                    valueB = b[column] || 0;
             }
 
             let comparison = 0;

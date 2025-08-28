@@ -316,15 +316,195 @@ class DataAnalyzer {
      */
     getGroupedBySocio() {
         return Array.from(this.groupedData.values())
-            .map(group => ({
-                socio: group.socio,
-                matriculas: group.matriculas,
-                totalMatriculas: group.matriculas.length,
-                temporales: group.temporales,
-                permanentes: group.permanentes,
-                fechaUltimoRegistro: group.fechaUltimoRegistro
-            }))
+            .map(group => {
+                const analytics = this.calculateSocioAnalytics(group);
+                return {
+                    socio: group.socio,
+                    matriculas: group.matriculas,
+                    totalMatriculas: group.matriculas.length,
+                    temporales: group.temporales,
+                    permanentes: group.permanentes,
+                    fechaUltimoRegistro: group.fechaUltimoRegistro,
+                    ...analytics
+                };
+            })
             .sort((a, b) => b.totalMatriculas - a.totalMatriculas);
+    }
+
+    /**
+     * Calcula métricas avanzadas para un socio
+     * @param {Object} group - Grupo de datos del socio
+     * @returns {Object} Métricas calculadas
+     */
+    calculateSocioAnalytics(group) {
+        const matriculas = group.matriculas;
+        
+        return {
+            diasPromedioPermiso: this.calculateAveragePermitDays(matriculas),
+            frecuenciaEstacional: this.calculateSeasonalFrequency(matriculas),
+            permisosCortos: this.countShortPermits(matriculas),
+            solapamientos: this.countOverlappingPlates(matriculas),
+            picoSimultaneo: this.findPeakSimultaneous(matriculas)
+        };
+    }
+
+    /**
+     * Calcula los días promedio de los permisos temporales
+     * @param {Array} matriculas - Array de matrículas
+     * @returns {number} Días promedio
+     */
+    calculateAveragePermitDays(matriculas) {
+        const temporales = matriculas.filter(m => 
+            m.tipoMatricula === 'temporal' && m.fechaInicio && m.fechaFin
+        );
+        
+        if (temporales.length === 0) return 0;
+        
+        const totalDias = temporales.reduce((sum, m) => {
+            const dias = Math.ceil((m.fechaFin - m.fechaInicio) / (1000 * 60 * 60 * 24));
+            return sum + Math.max(1, dias); // Mínimo 1 día
+        }, 0);
+        
+        return Math.round((totalDias / temporales.length) * 10) / 10; // 1 decimal
+    }
+
+    /**
+     * Calcula la frecuencia mensual por estación
+     * @param {Array} matriculas - Array de matrículas
+     * @returns {Object} Frecuencias de verano e invierno
+     */
+    calculateSeasonalFrequency(matriculas) {
+        const mesesVerano = [5, 6, 7, 8]; // Junio, Julio, Agosto, Septiembre (0-indexed)
+        const mesesInvierno = [0, 1, 2, 3, 4, 9, 10, 11]; // Resto del año
+        
+        const registrosPorMes = new Map();
+        
+        // Agrupar registros por año-mes
+        matriculas.forEach(m => {
+            if (m.fechaInicio) {
+                const yearMonth = `${m.fechaInicio.getFullYear()}-${m.fechaInicio.getMonth()}`;
+                if (!registrosPorMes.has(yearMonth)) {
+                    registrosPorMes.set(yearMonth, { verano: 0, invierno: 0, mes: m.fechaInicio.getMonth() });
+                }
+                
+                const mes = m.fechaInicio.getMonth();
+                if (mesesVerano.includes(mes)) {
+                    registrosPorMes.get(yearMonth).verano++;
+                } else {
+                    registrosPorMes.get(yearMonth).invierno++;
+                }
+            }
+        });
+        
+        // Calcular promedios
+        const mesesConVerano = Array.from(registrosPorMes.values()).filter(m => m.verano > 0);
+        const mesesConInvierno = Array.from(registrosPorMes.values()).filter(m => m.invierno > 0);
+        
+        const promedioVerano = mesesConVerano.length > 0 
+            ? mesesConVerano.reduce((sum, m) => sum + m.verano, 0) / mesesConVerano.length 
+            : 0;
+            
+        const promedioInvierno = mesesConInvierno.length > 0 
+            ? mesesConInvierno.reduce((sum, m) => sum + m.invierno, 0) / mesesConInvierno.length 
+            : 0;
+        
+        return {
+            verano: Math.round(promedioVerano * 10) / 10,
+            invierno: Math.round(promedioInvierno * 10) / 10
+        };
+    }
+
+    /**
+     * Cuenta permisos de 7 días o menos
+     * @param {Array} matriculas - Array de matrículas
+     * @returns {number} Número de permisos cortos
+     */
+    countShortPermits(matriculas) {
+        return matriculas.filter(m => {
+            if (m.tipoMatricula !== 'temporal' || !m.fechaInicio || !m.fechaFin) return false;
+            const dias = Math.ceil((m.fechaFin - m.fechaInicio) / (1000 * 60 * 60 * 24));
+            return dias <= 7;
+        }).length;
+    }
+
+    /**
+     * Cuenta solapamientos de matrículas activas simultáneamente
+     * @param {Array} matriculas - Array de matrículas
+     * @returns {number} Número de solapamientos detectados
+     */
+    countOverlappingPlates(matriculas) {
+        let solapamientos = 0;
+        
+        for (let i = 0; i < matriculas.length; i++) {
+            for (let j = i + 1; j < matriculas.length; j++) {
+                const m1 = matriculas[i];
+                const m2 = matriculas[j];
+                
+                // Solo verificar matrículas diferentes
+                if (m1.matricula === m2.matricula) continue;
+                
+                if (this.datesOverlap(m1.fechaInicio, m1.fechaFin, m2.fechaInicio, m2.fechaFin)) {
+                    solapamientos++;
+                }
+            }
+        }
+        
+        return solapamientos;
+    }
+
+    /**
+     * Encuentra el pico máximo de matrículas simultáneas
+     * @param {Array} matriculas - Array de matrículas
+     * @returns {number} Máximo número de matrículas activas al mismo tiempo
+     */
+    findPeakSimultaneous(matriculas) {
+        const eventos = [];
+        
+        // Crear eventos de inicio y fin
+        matriculas.forEach(m => {
+            if (m.fechaInicio) {
+                eventos.push({ fecha: m.fechaInicio, tipo: 'inicio', matricula: m.matricula });
+                
+                // Para permanentes sin fecha fin, usar fecha muy lejana
+                const fechaFin = m.fechaFin || new Date('2999-12-31');
+                eventos.push({ fecha: fechaFin, tipo: 'fin', matricula: m.matricula });
+            }
+        });
+        
+        // Ordenar eventos por fecha
+        eventos.sort((a, b) => a.fecha - b.fecha);
+        
+        let activas = 0;
+        let maxSimultaneas = 0;
+        
+        eventos.forEach(evento => {
+            if (evento.tipo === 'inicio') {
+                activas++;
+                maxSimultaneas = Math.max(maxSimultaneas, activas);
+            } else {
+                activas--;
+            }
+        });
+        
+        return maxSimultaneas;
+    }
+
+    /**
+     * Verifica si dos rangos de fechas se solapan
+     * @param {Date} inicio1 - Fecha inicio del primer rango
+     * @param {Date} fin1 - Fecha fin del primer rango
+     * @param {Date} inicio2 - Fecha inicio del segundo rango
+     * @param {Date} fin2 - Fecha fin del segundo rango
+     * @returns {boolean} True si se solapan
+     */
+    datesOverlap(inicio1, fin1, inicio2, fin2) {
+        if (!inicio1 || !inicio2) return false;
+        
+        // Para permanentes sin fecha fin, usar fecha muy lejana
+        const f1 = fin1 || new Date('2999-12-31');
+        const f2 = fin2 || new Date('2999-12-31');
+        
+        return inicio1 < f2 && inicio2 < f1;
     }
 
     /**
