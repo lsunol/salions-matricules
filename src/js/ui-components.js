@@ -99,7 +99,7 @@ class UIComponents {
                 </td>
                 <td>
                     <span class="metric-badge clickable-metric ${row.picoSimultaneo > 4 ? 'metric-warning' : ''}" 
-                          title="Máximo de matrículas activas simultáneamente - Clic para ver detalles"
+                          title="Máximo de matrículas temporales activas simultáneamente - Clic para ver detalles"
                           onclick="window.uiComponents.showPicoSimultaneoModal('${this.escapeForAttribute(row.socio || row.member)}', '${this.generateRowId(row)}')">
                         ${row.picoSimultaneo || 0} 👁️
                     </span>
@@ -505,10 +505,10 @@ class UIComponents {
         const content = `
             <div class="pico-modal-content">
                 <div class="pico-summary">
-                    <h4>📊 Resumen del Pico Simultáneo</h4>
+                    <h4>📊 Resumen del Pico Simultáneo (Solo Temporales)</h4>
                     <div class="pico-info">
                         <div class="info-item">
-                            <strong>Máximo simultáneo:</strong> ${picoDetalle.cantidad || 'No especificado'} matrículas
+                            <strong>Máximo simultáneo:</strong> ${picoDetalle.cantidad || 'No especificado'} matrículas temporales
                         </div>
                         <div class="info-item">
                             <strong>Fecha del pico:</strong> ${fecha}
@@ -518,7 +518,7 @@ class UIComponents {
                 
                 ${matriculas.length > 0 ? `
                     <div class="matriculas-section">
-                        <h4>🚗 Matrículas Activas en el Pico</h4>
+                        <h4>🚗 Matrículas Temporales Activas en el Pico</h4>
                         <div class="matriculas-grid">
                             ${matriculasHtml}
                         </div>
@@ -526,7 +526,7 @@ class UIComponents {
                 ` : ''}
                 
                 <div class="pico-note">
-                    <p><strong>Nota:</strong> Este pico representa el momento en que el socio tuvo el mayor número de matrículas activas simultáneamente.</p>
+                    <p><strong>Nota:</strong> Este pico representa el momento en que el socio tuvo el mayor número de matrículas temporales activas simultáneamente. Las matrículas permanentes no se incluyen en este cálculo.</p>
                 </div>
             </div>
             

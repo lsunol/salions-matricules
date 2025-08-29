@@ -455,22 +455,23 @@ class DataAnalyzer {
     }
 
     /**
-     * Encuentra el pico máximo de matrículas simultáneas
+     * Encuentra el pico máximo de matrículas temporales simultáneas
+     * Solo considera matrículas temporales con fechas de inicio y fin definidas
      * @param {Array} matriculas - Array de matrículas
-     * @returns {number} Máximo número de matrículas activas al mismo tiempo
+     * @returns {Object} Objeto con count (número) y details (detalles del pico)
      */
     findPeakSimultaneous(matriculas) {
         const eventos = [];
         
-        // Crear eventos de inicio y fin
-        matriculas.forEach(m => {
-            if (m.fechaInicio) {
-                eventos.push({ fecha: m.fechaInicio, tipo: 'inicio', matricula: m.matricula });
-                
-                // Para permanentes sin fecha fin, usar fecha muy lejana
-                const fechaFin = m.fechaFin || new Date('2999-12-31');
-                eventos.push({ fecha: fechaFin, tipo: 'fin', matricula: m.matricula });
-            }
+        // Filtrar solo matrículas temporales para el cálculo del pico
+        const matriculasTemporales = matriculas.filter(m => 
+            m.tipoMatricula === 'temporal' && m.fechaInicio && m.fechaFin
+        );
+        
+        // Crear eventos de inicio y fin solo para temporales
+        matriculasTemporales.forEach(m => {
+            eventos.push({ fecha: m.fechaInicio, tipo: 'inicio', matricula: m.matricula });
+            eventos.push({ fecha: m.fechaFin, tipo: 'fin', matricula: m.matricula });
         });
         
         // Ordenar eventos por fecha

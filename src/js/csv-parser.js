@@ -311,14 +311,13 @@ class CSVParser {
         const match = cleaned.match(gmtPattern);
         
         if (match) {
-            const [, day, month, year, hour, minute, second] = match;
+            const [, day, month, year] = match;
+            // Crear fecha solo con día, mes, año (sin hora) para normalizar
             const date = new Date(
                 parseInt(year), 
                 parseInt(month) - 1, 
                 parseInt(day),
-                parseInt(hour),
-                parseInt(minute),
-                parseInt(second)
+                0, 0, 0, 0  // Establecer hora a 00:00:00.000
             );
             
             // Validar que la fecha sea válida
