@@ -211,6 +211,9 @@ class SalionsApp {
             // Obtener estadísticas generales
             const stats = this.dataAnalyzer.getStats();
             
+            // Activar modo compacto de la interfaz
+            this.activateCompactMode();
+            
             // Actualizar UI
             this.ui.updateSummaryCards(stats);
             this.showAnalysisSection();
@@ -454,6 +457,41 @@ class SalionsApp {
             button.innerHTML = '🔍 Detectar abusos';
             button.addEventListener('click', () => this.findSuspiciousMembers());
             resultsHeader.appendChild(button);
+        }
+    }
+
+    /**
+     * Activa el modo compacto de la interfaz después de cargar datos
+     */
+    activateCompactMode() {
+        // Agregar clase compacta al header con transición
+        const header = document.querySelector('.header');
+        if (header) {
+            // Usar un pequeño delay para que la transición sea visible
+            setTimeout(() => {
+                header.classList.add('compact');
+            }, 100);
+        }
+
+        // Ocultar la sección de upload con animación
+        const uploadSection = document.querySelector('.upload-section');
+        if (uploadSection) {
+            setTimeout(() => {
+                uploadSection.classList.add('hidden');
+                
+                // Después de la transición, ocultar completamente
+                setTimeout(() => {
+                    uploadSection.style.display = 'none';
+                }, 600); // Coincide con la duración de la transición CSS
+            }, 200);
+        }
+
+        // Hacer que la información del archivo sea más compacta
+        const fileInfo = document.getElementById('fileInfo');
+        if (fileInfo && fileInfo.style.display !== 'none') {
+            setTimeout(() => {
+                fileInfo.classList.add('compact');
+            }, 300);
         }
     }
 }

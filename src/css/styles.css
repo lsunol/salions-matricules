@@ -10,9 +10,11 @@
     --danger-color: #dc2626;
     --background: #f8fafc;
     --surface: #ffffff;
+    --surface-light: #f1f5f9;
     --text-primary: #1e293b;
     --text-secondary: #64748b;
     --border: #e2e8f0;
+    --border-light: #f1f5f9;
     --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
     --radius: 0.5rem;
@@ -569,4 +571,102 @@ section h2 {
 
 .tipo-indicator.permanente {
     background-color: var(--success-color);
+}
+
+/* Estados compactos y transiciones para después de cargar datos */
+.header {
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header.compact {
+    padding: 1rem 0;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.header.compact h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.25rem;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header.compact p {
+    font-size: 0.95rem;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Ocultar sección de upload con transición suave */
+.upload-section {
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
+    opacity: 1;
+    overflow: hidden;
+}
+
+.upload-section.hidden {
+    transform: translateY(-20px);
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+}
+
+/* Información del archivo cargado - compacta y elegante */
+.file-info {
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 0.75rem 1rem;
+    background: var(--surface-light);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-light);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.file-info.compact {
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.file-info .file-name {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.file-info .file-size {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+/* Animación de desvanecimiento para transiciones */
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-out {
+    animation: fadeOut 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.fade-in {
+    animation: fadeIn 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
