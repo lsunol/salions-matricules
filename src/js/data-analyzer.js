@@ -338,13 +338,15 @@ class DataAnalyzer {
      */
     calculateSocioAnalytics(group) {
         const matriculas = group.matriculas;
+        const peakData = this.findPeakSimultaneous(matriculas);
         
         return {
             diasPromedioPermiso: this.calculateAveragePermitDays(matriculas),
             frecuenciaEstacional: this.calculateSeasonalFrequency(matriculas),
             permisosCortos: this.countShortPermits(matriculas),
             solapamientos: this.countOverlappingPlates(matriculas),
-            picoSimultaneo: this.findPeakSimultaneous(matriculas)
+            picoSimultaneo: peakData.count,
+            picoDetalle: peakData.details
         };
     }
 
@@ -476,17 +478,36 @@ class DataAnalyzer {
         
         let activas = 0;
         let maxSimultaneas = 0;
+        let matriculasActivas = new Set();
+        let peakDetails = {
+            cantidad: 0,
+            fecha: null,
+            matriculas: []
+        };
         
         eventos.forEach(evento => {
             if (evento.tipo === 'inicio') {
                 activas++;
-                maxSimultaneas = Math.max(maxSimultaneas, activas);
+                matriculasActivas.add(evento.matricula);
+                
+                if (activas > maxSimultaneas) {
+                    maxSimultaneas = activas;
+                    peakDetails = {
+                        cantidad: activas,
+                        fecha: evento.fecha,
+                        matriculas: Array.from(matriculasActivas)
+                    };
+                }
             } else {
                 activas--;
+                matriculasActivas.delete(evento.matricula);
             }
         });
         
-        return maxSimultaneas;
+        return {
+            count: maxSimultaneas,
+            details: peakDetails
+        };
     }
 
     /**

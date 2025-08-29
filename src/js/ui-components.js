@@ -65,10 +65,10 @@ class UIComponents {
 
         tbody.innerHTML = pageData.map(row => `
             <tr>
-                <td>${this.escapeHtml(row.socio || row.member)}</td>
+                <td class="socio-cell"><strong>${this.escapeHtml(row.socio || row.member)}</strong></td>
                 <td>
                     <div class="matriculas-count">
-                        <span class="total">${row.totalMatriculas || (row.matriculas ? row.matriculas.length : 0)}</span>
+                        <span class="total-badge">${row.totalMatriculas || (row.matriculas ? row.matriculas.length : 0)}</span>
                         ${row.temporales !== undefined ? `
                             <div class="tipo-breakdown">
                                 <span class="matricula-badge matricula-temporal">T:${row.temporales}</span>
@@ -77,13 +77,13 @@ class UIComponents {
                         ` : ''}
                     </div>
                 </td>
-                <td>
+                <td class="centered-cell">
                     <span class="metric-value" title="Días promedio de permisos temporales">
-                        ${row.diasPromedioPermiso ? `${row.diasPromedioPermiso}d` : '-'}
+                        ${row.diasPromedioPermiso ? `${row.diasPromedioPermiso.toString().replace('.', ',')} días` : '-'}
                     </span>
                 </td>
                 <td>
-                    <div class="frequency-seasonal" title="Frecuencia mensual: Verano ☀️ / Invierno ❄️">
+                    <div class="frequency-seasonal" title="Frecuencia mensual: Verano ☀️ (Jun-Sep) / Invierno ❄️ (Oct-May)">
                         ${this.formatSeasonalFrequency(row.frecuenciaEstacional)}
                     </div>
                 </td>
@@ -98,8 +98,10 @@ class UIComponents {
                     </span>
                 </td>
                 <td>
-                    <span class="metric-badge ${row.picoSimultaneo > 4 ? 'metric-warning' : ''}" title="Máximo de matrículas activas simultáneamente">
-                        ${row.picoSimultaneo || 0}
+                    <span class="metric-badge clickable-metric ${row.picoSimultaneo > 4 ? 'metric-warning' : ''}" 
+                          title="Máximo de matrículas activas simultáneamente - Clic para ver detalles"
+                          onclick="window.uiComponents.showPicoSimultaneoModal('${this.escapeForAttribute(row.socio || row.member)}', '${this.generateRowId(row)}')">
+                        ${row.picoSimultaneo || 0} 👁️
                     </span>
                 </td>
                 <td>
@@ -109,6 +111,27 @@ class UIComponents {
                 </td>
             </tr>
         `).join('');
+
+        // Guardar datos para modales
+        pageData.forEach(row => {
+            const rowId = this.generateRowId(row);
+            
+            // Guardar datos de matrículas
+            if (!window.platesData) window.platesData = {};
+            let matriculas = [];
+            if (row.matriculas && Array.isArray(row.matriculas)) {
+                matriculas = row.matriculas;
+            } else if (row.plates && Array.isArray(row.plates)) {
+                matriculas = row.plates.map(plate => ({ matricula: plate }));
+            } else if (row.matriculasDetalle && Array.isArray(row.matriculasDetalle)) {
+                matriculas = row.matriculasDetalle;
+            }
+            window.platesData[rowId] = matriculas;
+            
+            // Guardar datos del pico simultáneo
+            if (!window.picoData) window.picoData = {};
+            window.picoData[rowId] = row.picoDetalle || null;
+        });
 
         // Añadir estilos para las matrículas si no existen
         this.addPlateStyles();
@@ -150,10 +173,6 @@ class UIComponents {
                 👁️ Ver todas (${totalMatriculas})
             </button>
         ` : '';
-        
-        // Guardar los datos para el modal
-        if (!window.platesData) window.platesData = {};
-        window.platesData[rowId] = matriculas;
         
         return `
             <div class="plates-preview">
@@ -456,6 +475,140 @@ class UIComponents {
     }
 
     /**
+     * Muestra modal con detalles del pico simultáneo
+     * @param {string} socioName - Nombre del socio
+     * @param {string} rowId - ID de la fila para obtener los datos
+     */
+    showPicoSimultaneoModal(socioName, rowId) {
+        const picoDetalle = window.picoData?.[rowId];
+        
+        if (!picoDetalle || !picoDetalle.fecha) {
+            this.showModal(`Pico Simultáneo - ${socioName}`, `
+                <div class="pico-modal-content">
+                    <p>No hay información detallada disponible sobre el pico simultáneo para este socio.</p>
+                </div>
+            `);
+            return;
+        }
+
+        const fecha = new Date(picoDetalle.fecha).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        const matriculas = picoDetalle.matriculas || [];
+        const matriculasHtml = matriculas.length > 0 ? 
+            matriculas.map(m => `<span class="matricula-item">${m}</span>`).join('') :
+            '<span class="no-data">No hay información de matrículas</span>';
+
+        const content = `
+            <div class="pico-modal-content">
+                <div class="pico-summary">
+                    <h4>📊 Resumen del Pico Simultáneo</h4>
+                    <div class="pico-info">
+                        <div class="info-item">
+                            <strong>Máximo simultáneo:</strong> ${picoDetalle.cantidad || 'No especificado'} matrículas
+                        </div>
+                        <div class="info-item">
+                            <strong>Fecha del pico:</strong> ${fecha}
+                        </div>
+                    </div>
+                </div>
+                
+                ${matriculas.length > 0 ? `
+                    <div class="matriculas-section">
+                        <h4>🚗 Matrículas Activas en el Pico</h4>
+                        <div class="matriculas-grid">
+                            ${matriculasHtml}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div class="pico-note">
+                    <p><strong>Nota:</strong> Este pico representa el momento en que el socio tuvo el mayor número de matrículas activas simultáneamente.</p>
+                </div>
+            </div>
+            
+            <style>
+                .pico-modal-content {
+                    max-width: 600px;
+                    max-height: 70vh;
+                    overflow-y: auto;
+                }
+                .pico-summary {
+                    background: #f8fafc;
+                    padding: 1.5rem;
+                    border-radius: 0.5rem;
+                    margin-bottom: 1.5rem;
+                    border-left: 4px solid #3b82f6;
+                }
+                .pico-summary h4 {
+                    margin: 0 0 1rem 0;
+                    color: #1f2937;
+                    font-size: 1.1rem;
+                }
+                .pico-info {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+                .info-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-size: 0.95rem;
+                    color: #374151;
+                }
+                .matriculas-section {
+                    margin-bottom: 1.5rem;
+                }
+                .matriculas-section h4 {
+                    font-size: 1rem;
+                    margin-bottom: 1rem;
+                    color: #374151;
+                    border-bottom: 2px solid #e5e7eb;
+                    padding-bottom: 0.5rem;
+                }
+                .matriculas-grid {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.5rem;
+                }
+                .matricula-item {
+                    background: #dbeafe;
+                    color: #1e40af;
+                    padding: 0.375rem 0.75rem;
+                    border-radius: 0.375rem;
+                    font-family: monospace;
+                    font-weight: 600;
+                    font-size: 0.875rem;
+                    border: 1px solid #93c5fd;
+                }
+                .no-data {
+                    color: #6b7280;
+                    font-style: italic;
+                }
+                .pico-note {
+                    background: #fffbeb;
+                    border: 1px solid #fed7aa;
+                    border-radius: 0.5rem;
+                    padding: 1rem;
+                    margin-top: 1rem;
+                }
+                .pico-note p {
+                    margin: 0;
+                    color: #92400e;
+                    font-size: 0.875rem;
+                    line-height: 1.5;
+                }
+            </style>
+        `;
+
+        this.showModal(`Pico Simultáneo - ${socioName}`, content);
+    }
+
+    /**
      * Genera tooltip para una matrícula
      * @param {Object} matricula - Datos de la matrícula
      * @returns {string} Texto del tooltip
@@ -632,6 +785,17 @@ class UIComponents {
                     color: #92400e;
                     border: 1px solid #fed7aa;
                 }
+                .metric-badge.clickable-metric {
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    user-select: none;
+                }
+                .metric-badge.clickable-metric:hover {
+                    background-color: var(--primary-color, #3b82f6);
+                    color: white;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+                }
                 .seasonal-freq {
                     display: flex;
                     flex-direction: column;
@@ -674,6 +838,18 @@ class UIComponents {
                 .matricula-permanente {
                     background-color: var(--success-bg, #dcfce7);
                     color: #166534;
+                }
+                .total-badge {
+                    display: inline-block;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.375rem;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    background-color: #e0e7ff;
+                    color: #3730a3;
+                    border: 1px solid #c7d2fe;
+                    text-align: center;
+                    min-width: 2rem;
                 }
             `;
             document.head.appendChild(style);

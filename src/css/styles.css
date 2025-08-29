@@ -353,6 +353,47 @@ section h2 {
     background-color: var(--background);
 }
 
+/* Estilos específicos para celdas de la tabla */
+.socio-cell {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.centered-cell {
+    text-align: center;
+}
+
+.centered-cell .metric-value {
+    text-align: center;
+    display: block;
+}
+
+.total-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background-color: #e0e7ff;
+    color: #3730a3;
+    border: 1px solid #c7d2fe;
+    text-align: center;
+    min-width: 2rem;
+}
+
+.clickable-metric {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.clickable-metric:hover {
+    background-color: var(--primary-color);
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
 /* Status badges */
 .status-badge {
     padding: 0.25rem 0.5rem;
