@@ -272,31 +272,52 @@ class SalionsApp {
             const filters = this.getCurrentFilters();
             let filteredData;
 
-            // Si hay filtro por tipo de matrícula específico
-            if (filters.matriculaType && filters.matriculaType !== 'all') {
-                filteredData = this.dataAnalyzer.filterSociosByMatriculaType(
-                    filters.matriculaType, 
-                    filters.dateRangeDays
-                );
-            } else if (filters.dateRangeDays) {
-                // Filtrar por período de tiempo
-                filteredData = this.dataAnalyzer.filterSociosByMatriculasInPeriod(
+            // Obtener datos base
+            let baseData = this.dataAnalyzer.getGroupedBySocio();
+
+            // Aplicar filtros de forma acumulativa
+            if (filters.dateRangeDays) {
+                baseData = this.dataAnalyzer.filterSociosByMatriculasInPeriod(
                     filters.minPlates,
                     filters.dateRangeDays
                 );
-            } else {
-                // Obtener todos los socios agrupados y filtrar por mínimo de matrículas
-                filteredData = this.dataAnalyzer.getGroupedBySocio()
-                    .filter(group => {
-                        const totalMatriculas = group.matriculas ? group.matriculas.length : 
-                                              (group.totalMatriculas || 0);
-                        return totalMatriculas >= filters.minPlates;
-                    })
-                    .map(group => ({
-                        ...group,
-                        matriculasDetalle: group.matriculas || []
-                    }));
             }
+
+            if (filters.matriculaType && filters.matriculaType !== 'all') {
+                if (filters.dateRangeDays) {
+                    // Aplicar filtro de tipo sobre datos ya filtrados por período
+                    baseData = this.applyMatriculaTypeFilterToData(baseData, filters.matriculaType);
+                } else {
+                    // Aplicar filtro de tipo directamente
+                    baseData = this.dataAnalyzer.filterSociosByMatriculaType(
+                        filters.matriculaType, 
+                        filters.dateRangeDays
+                    );
+                }
+            }
+
+            if (filters.season && filters.season !== 'all') {
+                if (filters.dateRangeDays || (filters.matriculaType && filters.matriculaType !== 'all')) {
+                    // Aplicar filtro de temporada sobre datos ya filtrados
+                    baseData = this.applySeasonFilterToData(baseData, filters.season);
+                } else {
+                    // Aplicar filtro de temporada directamente
+                    baseData = this.dataAnalyzer.filterSociosBySeason(
+                        filters.season,
+                        filters.minPlates
+                    );
+                }
+            }
+
+            // Aplicar filtro final de número mínimo de matrículas
+            filteredData = baseData.filter(group => {
+                const totalMatriculas = group.matriculas ? group.matriculas.length : 
+                                      (group.totalMatriculas || 0);
+                return totalMatriculas >= filters.minPlates;
+            }).map(group => ({
+                ...group,
+                matriculasDetalle: group.matriculas || group.matriculasDetalle || []
+            }));
             
             this.ui.renderTable(filteredData);
             
@@ -493,6 +514,120 @@ class SalionsApp {
                 fileInfo.classList.add('compact');
             }, 300);
         }
+    }
+
+    /**
+     * Aplica filtro de tipo de matrícula sobre datos ya filtrados
+     * @param {Array} data - Datos ya filtrados
+     * @param {string} tipo - Tipo de matrícula ('temporal' o 'permanente')
+     * @returns {Array} Datos filtrados
+     */
+    applyMatriculaTypeFilterToData(data, tipo) {
+        return data.map(group => {
+            const matriculasFiltradas = group.matriculas.filter(m => m.tipoMatricula === tipo);
+            
+            if (matriculasFiltradas.length === 0) return null;
+
+            // Recalcular todas las estadísticas para las matrículas filtradas
+            const temporalesFiltradas = matriculasFiltradas.filter(m => m.tipoMatricula === 'temporal');
+            const permanentesFiltradas = matriculasFiltradas.filter(m => m.tipoMatricula === 'permanente');
+            
+            // Recalcular estadísticas avanzadas
+            const diasPromedio = this.dataAnalyzer.calculateAveragePermitDays(temporalesFiltradas);
+            const frecuencia = this.dataAnalyzer.calculateSeasonalFrequency(matriculasFiltradas);
+            const permisosCortos = this.dataAnalyzer.countShortPermits(matriculasFiltradas);
+            const solapamientos = this.dataAnalyzer.countOverlappingPlates(matriculasFiltradas);
+            const peakData = this.dataAnalyzer.findPeakSimultaneous(matriculasFiltradas);
+
+            return {
+                ...group,
+                matriculas: matriculasFiltradas,
+                matriculasDetalle: matriculasFiltradas,
+                totalMatriculas: matriculasFiltradas.length,
+                temporales: temporalesFiltradas.length,
+                permanentes: permanentesFiltradas.length,
+                diasPromedioPermiso: diasPromedio,
+                frecuenciaEstacional: frecuencia,
+                permisosCortos: permisosCortos,
+                solapamientos: solapamientos,
+                picoSimultaneo: peakData.count,
+                picoDetalle: peakData.details
+            };
+        }).filter(group => group !== null);
+    }
+
+    /**
+     * Aplica filtro de temporada sobre datos ya filtrados
+     * @param {Array} data - Datos ya filtrados
+     * @param {string} season - Temporada ('verano' o 'invierno')
+     * @returns {Array} Datos filtrados
+     */
+    applySeasonFilterToData(data, season) {
+        return data.map(group => {
+            const matriculasFiltradas = group.matriculas.filter(m => {
+                if (!m.fechaInicio) return false;
+                const mes = m.fechaInicio.getMonth() + 1; // 1-12
+                return season === 'verano' ? TEMPORADAS.isVerano(mes) : TEMPORADAS.isInvierno(mes);
+            });
+            
+            if (matriculasFiltradas.length === 0) return null;
+
+            // Recalcular estadísticas básicas
+            const temporalesFiltradas = matriculasFiltradas.filter(m => m.tipoMatricula === 'temporal');
+            const permanentesFiltradas = matriculasFiltradas.filter(m => m.tipoMatricula === 'permanente');
+
+            // Recalcular estadísticas avanzadas
+            const diasPromedio = this.dataAnalyzer.calculateAveragePermitDays(temporalesFiltradas);
+            
+            // Para frecuencia estacional, cuando ya filtramos por temporada, 
+            // solo mostrar la temporada filtrada
+            const frecuencia = {
+                verano: season === 'verano' ? this.calculateMonthlyFrequency(matriculasFiltradas) : 0,
+                invierno: season === 'invierno' ? this.calculateMonthlyFrequency(matriculasFiltradas) : 0
+            };
+            
+            const permisosCortos = this.dataAnalyzer.countShortPermits(matriculasFiltradas);
+            const solapamientos = this.dataAnalyzer.countOverlappingPlates(matriculasFiltradas);
+            const peakData = this.dataAnalyzer.findPeakSimultaneous(matriculasFiltradas);
+
+            return {
+                ...group,
+                matriculas: matriculasFiltradas,
+                matriculasDetalle: matriculasFiltradas,
+                totalMatriculas: matriculasFiltradas.length,
+                temporales: temporalesFiltradas.length,
+                permanentes: permanentesFiltradas.length,
+                diasPromedioPermiso: diasPromedio,
+                frecuenciaEstacional: frecuencia,
+                permisosCortos: permisosCortos,
+                solapamientos: solapamientos,
+                picoSimultaneo: peakData.count,
+                picoDetalle: peakData.details
+            };
+        }).filter(group => group !== null);
+    }
+
+    /**
+     * Calcula la frecuencia mensual para un conjunto de matrículas
+     * @param {Array} matriculas - Array de matrículas
+     * @returns {number} Promedio mensual
+     */
+    calculateMonthlyFrequency(matriculas) {
+        if (matriculas.length === 0) return 0;
+
+        const registrosPorMes = new Map();
+        
+        matriculas.forEach(m => {
+            if (m.fechaInicio) {
+                const yearMonth = `${m.fechaInicio.getFullYear()}-${m.fechaInicio.getMonth()}`;
+                registrosPorMes.set(yearMonth, (registrosPorMes.get(yearMonth) || 0) + 1);
+            }
+        });
+
+        if (registrosPorMes.size === 0) return 0;
+        
+        const totalRegistros = Array.from(registrosPorMes.values()).reduce((sum, count) => sum + count, 0);
+        return Math.round((totalRegistros / registrosPorMes.size) * 10) / 10;
     }
 }
 

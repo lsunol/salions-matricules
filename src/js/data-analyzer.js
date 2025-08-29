@@ -276,6 +276,71 @@ class DataAnalyzer {
     }
 
     /**
+     * Filtra socios por temporada
+     * @param {string} temporada - 'verano', 'invierno' o 'all'
+     * @param {number} minMatriculas - Mínimo número de matrículas
+     * @returns {Array} Array de socios filtrados
+     */
+    filterSociosBySeason(temporada, minMatriculas = 1) {
+        if (temporada === 'all') {
+            return this.getGroupedBySocio().filter(group => 
+                (group.matriculas ? group.matriculas.length : group.totalMatriculas) >= minMatriculas
+            );
+        }
+
+        return Array.from(this.groupedData.values())
+            .map(group => {
+                // Filtrar matrículas por temporada basándose en la fecha de inicio
+                const matriculasFiltradas = group.matriculas.filter(m => {
+                    if (!m.fechaInicio) return false;
+                    
+                    const mes = m.fechaInicio.getMonth() + 1; // Convertir a 1-12
+                    const esVerano = TEMPORADAS.isVerano(mes);
+                    
+                    if (temporada === 'verano') {
+                        return esVerano;
+                    } else if (temporada === 'invierno') {
+                        return !esVerano;
+                    }
+                    
+                    return false;
+                });
+
+                if (matriculasFiltradas.length < minMatriculas) {
+                    return null;
+                }
+
+                // Recalcular estadísticas para las matrículas filtradas
+                const temporalesFiltradas = matriculasFiltradas.filter(m => m.tipoMatricula === 'temporal');
+                const permanentesFiltradas = matriculasFiltradas.filter(m => m.tipoMatricula === 'permanente');
+                
+                const diasPromedio = this.calculateAveragePermitDays(temporalesFiltradas);
+                const frecuencia = this.calculateSeasonalFrequency(matriculasFiltradas);
+                const permisosCortos = this.countShortPermits(matriculasFiltradas);
+                const solapamientos = this.countOverlappingPlates(matriculasFiltradas);
+                const peakData = this.findPeakSimultaneous(matriculasFiltradas);
+
+                return {
+                    socio: group.socio,
+                    matriculas: matriculasFiltradas,
+                    matriculasDetalle: matriculasFiltradas,
+                    totalMatriculas: matriculasFiltradas.length,
+                    temporales: temporalesFiltradas.length,
+                    permanentes: permanentesFiltradas.length,
+                    diasPromedioPermiso: diasPromedio,
+                    frecuenciaEstacional: frecuencia,
+                    permisosCortos: permisosCortos,
+                    solapamientos: solapamientos,
+                    picoSimultaneo: peakData.count,
+                    picoDetalle: peakData.details,
+                    fechaUltimoRegistro: group.fechaUltimoRegistro
+                };
+            })
+            .filter(item => item !== null)
+            .sort((a, b) => b.totalMatriculas - a.totalMatriculas);
+    }
+
+    /**
      * Busca socios por texto
      * @param {string} searchText - Texto a buscar
      * @returns {Array} Array de socios que coinciden
