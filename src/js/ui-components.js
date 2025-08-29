@@ -13,6 +13,20 @@ class UIComponents {
     }
 
     /**
+     * Genera tooltips para iconos de temporadas
+     * @param {string} tipo - 'verano' o 'invierno'
+     * @returns {string} Tooltip text
+     */
+    static getSeasonTooltip(tipo) {
+        if (tipo === 'verano') {
+            return 'Verano: de Junio a Septiembre';
+        } else if (tipo === 'invierno') {
+            return 'Invierno: de Octubre a Mayo';
+        }
+        return '';
+    }
+
+    /**
      * Actualiza las tarjetas de resumen
      * @param {Object} stats - Estadísticas generales
      */
@@ -20,14 +34,29 @@ class UIComponents {
         const elements = {
             totalRecords: document.getElementById('totalRecords'),
             totalMembers: document.getElementById('totalMembers'),
-            totalPlates: document.getElementById('totalPlates'),
+            dailyRegistrations: document.getElementById('dailyRegistrations'),
+            dailyRegistrationsDetail: document.getElementById('dailyRegistrationsDetail'),
             avgPlatesPerMember: document.getElementById('avgPlatesPerMember')
         };
 
         // Mapear las propiedades del nuevo formato de stats
         if (elements.totalRecords) elements.totalRecords.textContent = stats.totalMatriculas.toLocaleString();
         if (elements.totalMembers) elements.totalMembers.textContent = stats.totalSocios.toLocaleString();
-        if (elements.totalPlates) elements.totalPlates.textContent = stats.totalMatriculas.toLocaleString();
+        
+        // Mostrar altas al día
+        if (elements.dailyRegistrations && stats.altasAlDia) {
+            elements.dailyRegistrations.textContent = stats.altasAlDia.promedio.toString().replace('.', ',');
+        }
+        if (elements.dailyRegistrationsDetail && stats.altasAlDia) {
+            // Crear HTML con tooltips para los iconos de temporadas
+            const veranoValue = stats.altasAlDia.verano.toString().replace('.', ',');
+            const inviernoValue = stats.altasAlDia.invierno.toString().replace('.', ',');
+            
+            elements.dailyRegistrationsDetail.innerHTML = `
+                <span title="${UIComponents.getSeasonTooltip('verano')}">☀️</span> ${veranoValue} / 
+                <span title="${UIComponents.getSeasonTooltip('invierno')}">❄️</span> ${inviernoValue}
+            `;
+        }
         
         // Calcular promedio de matrículas por socio
         const avgPlates = stats.totalSocios > 0 ? (stats.totalMatriculas / stats.totalSocios).toFixed(1) : '0';
@@ -643,8 +672,8 @@ class UIComponents {
         
         return `
             <div class="seasonal-freq">
-                <div class="freq-winter" title="Promedio mensual en invierno">${invierno} ❄️</div>
-                <div class="freq-summer" title="Promedio mensual en verano">${verano} ☀️</div>
+                <div class="freq-winter" title="${UIComponents.getSeasonTooltip('invierno')}">${invierno} <span title="${UIComponents.getSeasonTooltip('invierno')}">❄️</span></div>
+                <div class="freq-summer" title="${UIComponents.getSeasonTooltip('verano')}">${verano} <span title="${UIComponents.getSeasonTooltip('verano')}">☀️</span></div>
             </div>
         `;
     }

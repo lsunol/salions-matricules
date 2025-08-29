@@ -1,4 +1,39 @@
 /**
+ * Definición de temporadas para análisis estacional
+ */
+const TEMPORADAS = {
+    VERANO_INICIO: 6,  // Junio (mes 6)
+    VERANO_FIN: 9,     // Septiembre (mes 9)
+    
+    /**
+     * Determina si un mes corresponde a la temporada de verano
+     * @param {number} mes - Número del mes (1-12)
+     * @returns {boolean} True si es verano
+     */
+    isVerano: function(mes) {
+        return mes >= this.VERANO_INICIO && mes <= this.VERANO_FIN;
+    },
+    
+    /**
+     * Determina si un mes corresponde a la temporada de invierno
+     * @param {number} mes - Número del mes (1-12)
+     * @returns {boolean} True si es invierno
+     */
+    isInvierno: function(mes) {
+        return !this.isVerano(mes);
+    },
+    
+    /**
+     * Obtiene el nombre de la temporada para un mes dado
+     * @param {number} mes - Número del mes (1-12)
+     * @returns {string} 'verano' o 'invierno'
+     */
+    getTemporada: function(mes) {
+        return this.isVerano(mes) ? 'verano' : 'invierno';
+    }
+};
+
+/**
  * Clase para analizar datos de matrículas procesadas (formato actualizado)
  */
 class DataAnalyzer {
@@ -89,6 +124,9 @@ class DataAnalyzer {
         }
 
         this.stats.totalSocios = this.groupedData.size;
+
+        // Calcular altas al día por temporadas
+        this.stats.altasAlDia = this.calculateDailyRegistrations();
 
         // Encontrar socios con más matrículas
         this.stats.sociosConMasMatriculas = Array.from(this.groupedData.values())
@@ -437,9 +475,6 @@ class DataAnalyzer {
      * @returns {Object} Frecuencias de verano e invierno
      */
     calculateSeasonalFrequency(matriculas) {
-        const mesesVerano = [5, 6, 7, 8]; // Junio, Julio, Agosto, Septiembre (0-indexed)
-        const mesesInvierno = [0, 1, 2, 3, 4, 9, 10, 11]; // Resto del año
-        
         const registrosPorMes = new Map();
         
         // Agrupar registros por año-mes
@@ -450,8 +485,8 @@ class DataAnalyzer {
                     registrosPorMes.set(yearMonth, { verano: 0, invierno: 0, mes: m.fechaInicio.getMonth() });
                 }
                 
-                const mes = m.fechaInicio.getMonth();
-                if (mesesVerano.includes(mes)) {
+                const mes = m.fechaInicio.getMonth() + 1; // Convertir a 1-12 para usar TEMPORADAS
+                if (TEMPORADAS.isVerano(mes)) {
                     registrosPorMes.get(yearMonth).verano++;
                 } else {
                     registrosPorMes.get(yearMonth).invierno++;
@@ -619,5 +654,65 @@ class DataAnalyzer {
         }
 
         return csvLines.join('\n');
+    }
+
+    /**
+     * Calcula el promedio de altas al día por temporadas
+     * @returns {Object} Objeto con promedios de verano e invierno
+     */
+    calculateDailyRegistrations() {
+        if (this.data.length === 0) {
+            return { promedio: 0, verano: 0, invierno: 0, detalle: 'Sin datos' };
+        }
+
+        // Agrupar registros por día
+        const registrosPorDia = new Map();
+        
+        for (const record of this.data) {
+            if (!record.fechaInicio) continue;
+            
+            const fecha = new Date(record.fechaInicio);
+            const fechaKey = `${fecha.getFullYear()}-${fecha.getMonth()}-${fecha.getDate()}`;
+            
+            if (!registrosPorDia.has(fechaKey)) {
+                registrosPorDia.set(fechaKey, {
+                    fecha: fecha,
+                    count: 0
+                });
+            }
+            
+            registrosPorDia.get(fechaKey).count++;
+        }
+
+        // Separar por temporadas usando la constante centralizada
+        let registrosVerano = [];
+        let registrosInvierno = [];
+        
+        for (const [, dayData] of registrosPorDia) {
+            const mes = dayData.fecha.getMonth() + 1; // Convertir a 1-12 para usar TEMPORADAS
+            
+            if (TEMPORADAS.isVerano(mes)) {
+                registrosVerano.push(dayData.count);
+            } else {
+                registrosInvierno.push(dayData.count);
+            }
+        }
+
+        // Calcular promedios
+        const promedioVerano = registrosVerano.length > 0 ? 
+            (registrosVerano.reduce((sum, count) => sum + count, 0) / registrosVerano.length) : 0;
+            
+        const promedioInvierno = registrosInvierno.length > 0 ? 
+            (registrosInvierno.reduce((sum, count) => sum + count, 0) / registrosInvierno.length) : 0;
+            
+        const promedioGeneral = registrosPorDia.size > 0 ? 
+            (this.data.length / registrosPorDia.size) : 0;
+
+        return {
+            promedio: Math.round(promedioGeneral * 10) / 10,
+            verano: Math.round(promedioVerano * 10) / 10,
+            invierno: Math.round(promedioInvierno * 10) / 10,
+            detalle: `☀️ ${Math.round(promedioVerano * 10) / 10} / ❄️ ${Math.round(promedioInvierno * 10) / 10}`
+        };
     }
 }
