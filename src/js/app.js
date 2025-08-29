@@ -277,9 +277,9 @@ class SalionsApp {
                 );
             } else if (filters.dateRangeDays) {
                 // Filtrar por período de tiempo
-                filteredData = this.dataAnalyzer.filterSociosByRegistrationPeriod(
-                    filters.dateRangeDays, 
-                    filters.minPlates
+                filteredData = this.dataAnalyzer.filterSociosByMatriculasInPeriod(
+                    filters.minPlates,
+                    filters.dateRangeDays
                 );
             } else {
                 // Obtener todos los socios agrupados y filtrar por mínimo de matrículas
