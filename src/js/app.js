@@ -265,7 +265,7 @@ class SalionsApp {
         [platesThreshold, dateRange, seasonFilter].forEach(input => {
             if (input) {
                 input.addEventListener('change', () => {
-                    this.applyCurrentFilters();
+                        this.applyCurrentFilters();
                 });
             }
         });
@@ -424,81 +424,40 @@ class SalionsApp {
     }
 
     /**
-     * Busca miembros sospechosos con muchas matrículas
+    /**
+     * Imprime la tabla actual con formato optimizado para A4
      */
-    findSuspiciousMembers() {
-        if (!this.currentData) {
-            this.ui.showNotification('No hay datos cargados', 'warning');
+    printResults() {
+        if (!this.ui.filteredData || this.ui.filteredData.length === 0) {
+            this.ui.showNotification('No hay datos para imprimir', 'warning');
             return;
         }
 
         try {
-            const suspicious = this.dataAnalyzer.findSuspiciousMembers({
-                minPlates: 8,
-                shortDuration: 30,
-                overlappingPeriods: true
-            });
-
-            if (suspicious.length === 0) {
-                this.ui.showNotification('No se encontraron patrones sospechosos', 'info');
-                return;
+            // Agregar fecha de impresión para el pie de página
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection) {
+                const printDate = new Date().toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                resultsSection.setAttribute('data-print-date', printDate);
             }
-
-            const suspiciousList = suspicious.map(member => 
-                `<div class="suspicious-member">
-                    <h4>${member.member}</h4>
-                    <p><strong>${member.platesCount} matrículas</strong></p>
-                    <ul>
-                        ${member.issues.map(issue => `<li>${issue}</li>`).join('')}
-                    </ul>
-                    <p><small>Severidad: ${member.severity}</small></p>
-                </div>`
-            ).join('');
-
-            const content = `
-                <div style="max-height: 500px; overflow-y: auto;">
-                    <p>Se encontraron <strong>${suspicious.length}</strong> socios con patrones sospechosos:</p>
-                    ${suspiciousList}
-                </div>
-                <style>
-                    .suspicious-member {
-                        padding: 1rem;
-                        margin: 1rem 0;
-                        background: #fef3c7;
-                        border-left: 4px solid #f59e0b;
-                        border-radius: 0.25rem;
-                    }
-                    .suspicious-member h4 {
-                        margin: 0 0 0.5rem 0;
-                        color: #92400e;
-                    }
-                    .suspicious-member ul {
-                        margin: 0.5rem 0;
-                        padding-left: 1.5rem;
-                    }
-                </style>
-            `;
-
-            this.ui.showModal('Análisis de socios sospechosos', content);
-
+            
+            // Notificar al usuario
+            this.ui.showNotification('Preparando vista de impresión...', 'info', 2000);
+            
+            // Pequeño delay para mostrar la notificación antes de abrir el diálogo
+            setTimeout(() => {
+                window.print();
+            }, 500);
+            
         } catch (error) {
-            console.error('Error buscando socios sospechosos:', error);
-            this.ui.showNotification('Error en el análisis de socios sospechosos', 'error');
-        }
-    }
-
-    /**
-     * Añade funcionalidad adicional de análisis
-     */
-    addAnalysisButton() {
-        const resultsHeader = document.querySelector('.results-actions');
-        if (resultsHeader && !document.getElementById('analyzeButton')) {
-            const button = document.createElement('button');
-            button.id = 'analyzeButton';
-            button.className = 'btn-secondary';
-            button.innerHTML = '🔍 Detectar abusos';
-            button.addEventListener('click', () => this.findSuspiciousMembers());
-            resultsHeader.appendChild(button);
+            console.error('Error preparando impresión:', error);
+            this.ui.showNotification('Error preparando la impresión', 'error');
         }
     }
 
@@ -658,18 +617,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Hacer la app accesible globalmente para debugging
     window.salionsApp = app;
-    
-    // Añadir botón de análisis cuando se muestren resultados
-    const observer = new MutationObserver(() => {
-        if (document.getElementById('resultsSection').style.display !== 'none') {
-            app.addAnalysisButton();
-        }
-    });
-    
-    const resultsSection = document.getElementById('resultsSection');
-    if (resultsSection) {
-        observer.observe(resultsSection, { attributes: true, attributeFilter: ['style'] });
-    }
 });
 
 // Manejar errores globales
