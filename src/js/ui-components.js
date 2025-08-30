@@ -292,31 +292,39 @@ class UIComponents {
         const temporales = sortedMatriculas.filter(m => m.tipoMatricula === 'temporal' || !m.tipoMatricula);
         
         const content = `
-            <div class="plates-modal-content">
-                <div class="plates-summary">
-                    <p><strong>Total:</strong> ${matriculas.length} matrículas</p>
-                    <p><strong>Permanentes:</strong> ${permanentes.length} | <strong>Temporales:</strong> ${temporales.length}</p>
+            <div class="plates-modal-content-large">
+                <!-- Header fijo -->
+                <div class="plates-modal-header">
+                    <div class="plates-summary-compact">
+                        <span><strong>Total:</strong> ${matriculas.length} matrículas</span>
+                        <span><strong>Permanentes:</strong> ${permanentes.length}</span>
+                        <span><strong>Temporales:</strong> ${temporales.length}</span>
+                    </div>
                 </div>
                 
-                ${permanentes.length > 0 ? `
-                    <div class="plates-section">
-                        <h4 class="section-title">🟢 Matrículas Permanentes (${permanentes.length})</h4>
-                        <div class="plates-grid">
-                            ${permanentes.map(m => this.renderDetailedPlate(m)).join('')}
+                <!-- Contenido scrolleable -->
+                <div class="plates-modal-scrollable">
+                    ${permanentes.length > 0 ? `
+                        <div class="plates-section">
+                            <h4 class="section-title">🟢 Matrículas Permanentes (${permanentes.length})</h4>
+                            <div class="plates-compact-grid">
+                                ${permanentes.map(m => this.renderCompactPlate(m, 'permanente')).join('')}
+                            </div>
                         </div>
-                    </div>
-                ` : ''}
-                
-                ${temporales.length > 0 ? `
-                    <div class="plates-section">
-                        <h4 class="section-title">🟡 Matrículas Temporales (${temporales.length})</h4>
-                        <div class="plates-grid">
-                            ${temporales.map(m => this.renderDetailedPlate(m)).join('')}
+                    ` : ''}
+                    
+                    ${temporales.length > 0 ? `
+                        <div class="plates-section">
+                            <h4 class="section-title">🟡 Matrículas Temporales (${temporales.length})</h4>
+                            <div class="plates-compact-grid">
+                                ${temporales.map(m => this.renderCompactPlate(m, 'temporal')).join('')}
+                            </div>
                         </div>
-                    </div>
-                ` : ''}
+                    ` : ''}
+                </div>
                 
-                <div class="plates-actions">
+                <!-- Footer fijo -->
+                <div class="plates-modal-footer">
                     <button class="copy-plates-btn" onclick="window.uiComponents.copyPlatestoClipboard('${rowId}')">
                         📋 Copiar lista al portapapeles
                     </button>
@@ -324,25 +332,62 @@ class UIComponents {
             </div>
             
             <style>
-                .plates-modal-content {
-                    max-width: 800px;
-                    max-height: 70vh;
-                    overflow-y: auto;
+                .plates-modal-content-large {
+                    max-width: 1200px;
+                    height: 80vh;
+                    display: flex;
+                    flex-direction: column;
+                    /* Removemos max-height y overflow-y para evitar doble scroll */
+                    padding: 0;
                 }
-                .plates-summary {
+                
+                .plates-modal-header {
+                    flex-shrink: 0;
+                    padding: 1rem;
+                    background: white;
+                    border-bottom: 1px solid #e5e7eb;
+                    border-radius: 0.5rem 0.5rem 0 0;
+                }
+                
+                .plates-modal-scrollable {
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 1rem;
+                    background: #f9fafb;
+                }
+                
+                .plates-modal-footer {
+                    flex-shrink: 0;
+                    padding: 1rem;
+                    background: white;
+                    border-top: 1px solid #e5e7eb;
+                    border-radius: 0 0 0.5rem 0.5rem;
+                    text-align: center;
+                }
+                
+                .plates-summary-compact {
                     background: #f8fafc;
                     padding: 1rem;
                     border-radius: 0.5rem;
-                    margin-bottom: 1.5rem;
                     border-left: 4px solid #3b82f6;
+                    display: flex;
+                    justify-content: space-around;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 1rem;
+                    text-align: center;
+                    margin: 0;
                 }
-                .plates-summary p {
-                    margin: 0.5rem 0;
+                
+                .plates-summary-compact span {
                     color: #374151;
+                    font-size: 0.95rem;
                 }
+                
                 .plates-section {
                     margin-bottom: 2rem;
                 }
+                
                 .section-title {
                     font-size: 1.1rem;
                     font-weight: 600;
@@ -351,59 +396,64 @@ class UIComponents {
                     border-bottom: 2px solid #e5e7eb;
                     color: #374151;
                 }
-                .plates-grid {
+                
+                .plates-compact-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-                    gap: 0.75rem;
+                    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                    gap: 0.5rem;
+                    background: #f9fafb;
+                    padding: 1rem;
+                    border-radius: 0.5rem;
+                    border: 1px solid #e5e7eb;
                 }
-                .detailed-plate {
+                
+                .compact-plate-item {
                     background: white;
                     border: 1px solid #e5e7eb;
-                    border-radius: 0.5rem;
-                    padding: 0.75rem;
+                    border-radius: 0.375rem;
+                    padding: 0.5rem 0.75rem;
+                    font-family: 'Segoe UI', system-ui, sans-serif;
+                    font-size: 0.875rem;
                     transition: all 0.2s ease;
-                }
-                .detailed-plate:hover {
-                    border-color: #3b82f6;
-                    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
-                }
-                .plate-header {
                     display: flex;
                     align-items: center;
                     gap: 0.5rem;
-                    margin-bottom: 0.5rem;
                 }
-                .plate-number {
-                    font-family: monospace;
+                
+                .compact-plate-item:hover {
+                    border-color: #3b82f6;
+                    box-shadow: 0 1px 3px rgba(59, 130, 246, 0.1);
+                    transform: translateY(-1px);
+                }
+                
+                .compact-plate-permanente {
+                    border-left: 3px solid #10b981;
+                    background: linear-gradient(135deg, #ffffff, #f0fdf4);
+                }
+                
+                .compact-plate-temporal {
+                    border-left: 3px solid #f59e0b;
+                    background: linear-gradient(135deg, #ffffff, #fffbeb);
+                }
+                
+                .plate-number-compact {
+                    font-family: 'Courier New', monospace;
                     font-weight: 700;
-                    font-size: 1rem;
                     color: #1f2937;
+                    min-width: 80px;
                 }
-                .plate-type-badge {
-                    padding: 0.125rem 0.5rem;
-                    border-radius: 1rem;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                }
-                .plate-type-permanente {
-                    background: #dcfce7;
-                    color: #166534;
-                }
-                .plate-type-temporal {
-                    background: #fef3c7;
-                    color: #92400e;
-                }
-                .plate-details {
-                    font-size: 0.875rem;
+                
+                .plate-dates-compact {
                     color: #6b7280;
-                    line-height: 1.4;
+                    flex-grow: 1;
                 }
-                .plates-actions {
-                    margin-top: 2rem;
-                    padding-top: 1rem;
-                    border-top: 1px solid #e5e7eb;
-                    text-align: center;
+                
+                .plate-user-compact {
+                    color: #6b7280;
+                    font-style: italic;
+                    font-size: 0.8rem;
                 }
+                
                 .copy-plates-btn {
                     background: linear-gradient(135deg, #10b981, #059669);
                     color: white;
@@ -414,14 +464,86 @@ class UIComponents {
                     cursor: pointer;
                     transition: all 0.2s ease;
                 }
+                
                 .copy-plates-btn:hover {
                     background: linear-gradient(135deg, #059669, #047857);
                     transform: translateY(-1px);
                 }
+                
+                @media (max-width: 768px) {
+                    .plates-modal-content-large {
+                        max-width: 95vw;
+                        height: 85vh;
+                    }
+                    
+                    .plates-modal-header,
+                    .plates-modal-footer {
+                        padding: 0.75rem;
+                    }
+                    
+                    .plates-modal-scrollable {
+                        padding: 0.75rem;
+                    }
+                    
+                    .plates-compact-grid {
+                        grid-template-columns: 1fr;
+                        gap: 0.375rem;
+                    }
+                    
+                    .plates-summary-compact {
+                        flex-direction: column;
+                        gap: 0.5rem;
+                        padding: 0.75rem;
+                    }
+                }
             </style>
         `;
         
-        this.showModal(`Matrículas de ${socioName}`, content);
+        this.showModal(`Matrículas de ${socioName}`, content, 'large-modal');
+    }
+
+    /**
+     * Formatea una fecha con ceros a la izquierda para consistencia visual
+     * @param {Date} date - Fecha a formatear
+     * @returns {string} Fecha formateada (DD/MM/YYYY)
+     */
+    formatDateWithPadding(date) {
+        if (!date) return '-';
+        
+        const day = date.getDate().toString().padStart(2, '0');
+        const month = (date.getMonth() + 1).toString().padStart(2, '0');
+        const year = date.getFullYear();
+        
+        return `${day}/${month}/${year}`;
+    }
+
+    /**
+     * Renderiza una matrícula en formato compacto
+     * @param {Object} matricula - Datos de la matrícula
+     * @param {string} tipo - 'permanente' o 'temporal'
+     * @returns {string} HTML de la matrícula compacta
+     */
+    renderCompactPlate(matricula, tipo) {
+        const fechaInicio = matricula.fechaInicio ? this.formatDateWithPadding(matricula.fechaInicio) : '-';
+        const usuario = matricula.usuario || 'Sin especificar';
+        
+        let fechasText = '';
+        if (tipo === 'permanente') {
+            // Formato: MATRICULA fecha (usuario)
+            fechasText = fechaInicio;
+        } else {
+            // Formato: MATRICULA fecha_inicio - fecha_fin (usuario)
+            const fechaFin = matricula.fechaFin ? this.formatDateWithPadding(matricula.fechaFin) : 'Sin límite';
+            fechasText = `${fechaInicio} - ${fechaFin}`;
+        }
+        
+        return `
+            <div class="compact-plate-item compact-plate-${tipo}">
+                <span class="plate-number-compact">${matricula.matricula}</span>
+                <span class="plate-dates-compact">${fechasText}</span>
+                <span class="plate-user-compact">(${usuario})</span>
+            </div>
+        `;
     }
 
     /**
@@ -433,8 +555,8 @@ class UIComponents {
         const tipoClass = matricula.tipoMatricula === 'permanente' ? 'plate-type-permanente' : 'plate-type-temporal';
         const tipoText = matricula.tipoMatricula === 'permanente' ? 'Permanente' : 'Temporal';
         
-        const fechaInicio = matricula.fechaInicio ? matricula.fechaInicio.toLocaleDateString('es-ES') : 'No especificada';
-        const fechaFin = matricula.fechaFin ? matricula.fechaFin.toLocaleDateString('es-ES') : 'Sin límite';
+        const fechaInicio = matricula.fechaInicio ? this.formatDateWithPadding(matricula.fechaInicio) : 'No especificada';
+        const fechaFin = matricula.fechaFin ? this.formatDateWithPadding(matricula.fechaFin) : 'Sin límite';
         const usuario = matricula.usuario || 'No especificado';
         
         return `
@@ -1283,11 +1405,11 @@ class UIComponents {
      * @param {string} title - Título del modal
      * @param {string} content - Contenido del modal
      */
-    showModal(title, content) {
+    showModal(title, content, modalClass = '') {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-            <div class="modal-content">
+            <div class="modal-content ${modalClass}">
                 <div class="modal-header">
                     <h3>${this.escapeHtml(title)}</h3>
                     <button class="modal-close">&times;</button>
@@ -1394,6 +1516,18 @@ class UIComponents {
                 }
                 .modal-body {
                     padding: 1.5rem;
+                }
+                
+                /* Estilos especiales para modales grandes */
+                .modal-content.large-modal {
+                    max-width: 95vw;
+                    max-height: 95vh;
+                }
+                
+                @media (min-width: 1024px) {
+                    .modal-content.large-modal {
+                        max-width: 1200px;
+                    }
                 }
             `;
             document.head.appendChild(style);
