@@ -395,9 +395,14 @@ class SalionsApp {
      */
     setupExport() {
         const exportButton = document.getElementById('exportResults');
+        const printButton = document.getElementById('printResults');
         
         exportButton?.addEventListener('click', () => {
             this.exportResults();
+        });
+
+        printButton?.addEventListener('click', () => {
+            this.printResults();
         });
     }
 
