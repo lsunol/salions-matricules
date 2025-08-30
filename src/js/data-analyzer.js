@@ -198,7 +198,7 @@ class DataAnalyzer {
                     frecuenciaEstacional: frecuencia,
                     permisosCortos: permisosCortos,
                     solapamientos: solapamientos,
-                    picoSimultaneo: peakData.count,
+                    picoSimultaneo: (peakData.details && peakData.details.matriculas) ? peakData.details.matriculas.length : 0,
                     picoDetalle: peakData.details,
                     fechaUltimoRegistro: group.fechaUltimoRegistro
                 };
@@ -266,7 +266,7 @@ class DataAnalyzer {
                     frecuenciaEstacional: frecuencia,
                     permisosCortos: permisosCortos,
                     solapamientos: solapamientos,
-                    picoSimultaneo: peakData.count,
+                    picoSimultaneo: (peakData.details && peakData.details.matriculas) ? peakData.details.matriculas.length : 0,
                     picoDetalle: peakData.details,
                     fechaUltimoRegistro: group.fechaUltimoRegistro
                 };
@@ -331,7 +331,7 @@ class DataAnalyzer {
                     frecuenciaEstacional: frecuencia,
                     permisosCortos: permisosCortos,
                     solapamientos: solapamientos,
-                    picoSimultaneo: peakData.count,
+                    picoSimultaneo: (peakData.details && peakData.details.matriculas) ? peakData.details.matriculas.length : 0,
                     picoDetalle: peakData.details,
                     fechaUltimoRegistro: group.fechaUltimoRegistro
                 };
@@ -509,7 +509,7 @@ class DataAnalyzer {
             frecuenciaEstacional: this.calculateSeasonalFrequency(matriculas),
             permisosCortos: this.countShortPermits(matriculas),
             solapamientos: this.countOverlappingPlates(matriculas),
-            picoSimultaneo: peakData.count,
+            picoSimultaneo: (peakData.details && peakData.details.matriculas) ? peakData.details.matriculas.length : 0,
             picoDetalle: peakData.details
         };
     }
@@ -667,8 +667,10 @@ class DataAnalyzer {
         });
         
         return {
-            count: maxSimultaneas,
-            details: peakDetails
+            details: {
+                fecha: peakDetails.fecha,
+                matriculas: peakDetails.matriculas
+            }
         };
     }
 

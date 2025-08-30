@@ -537,7 +537,7 @@ class UIComponents {
                     <h4>📊 Resumen del Pico Simultáneo (Solo Temporales)</h4>
                     <div class="pico-info">
                         <div class="info-item">
-                            <strong>Máximo simultáneo:</strong> ${picoDetalle.cantidad || 'No especificado'} matrículas temporales
+                            <strong>Máximo simultáneo:</strong> ${matriculas.length} matrículas temporales
                         </div>
                         <div class="info-item">
                             <strong>Fecha del pico:</strong> ${fecha}
