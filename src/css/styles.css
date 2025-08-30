@@ -741,46 +741,49 @@ section h2 {
     
     /* Sección de resumen compacta */
     .summary-section {
-        margin-bottom: 0.5cm !important;
+        margin-bottom: 0.3cm !important;
         page-break-inside: avoid;
     }
     
     .summary-section h2 {
-        font-size: 14pt;
-        margin-bottom: 0.3cm;
+        font-size: 12pt;
+        margin-bottom: 0.2cm;
         color: black !important;
     }
     
     .summary-cards {
         display: flex !important;
-        flex-wrap: wrap;
-        gap: 0.3cm;
-        justify-content: space-around;
+        flex-wrap: nowrap;
+        gap: 0.2cm;
+        justify-content: space-between;
     }
     
     .summary-card {
         flex: 1;
-        min-width: 3cm;
+        min-width: 2.5cm;
         text-align: center;
-        padding: 0.2cm;
-        border: 1px solid #ccc;
-        background: #f8f8f8 !important;
+        padding: 0.15cm;
+        border: 1px solid #999;
+        background: #f5f5f5 !important;
     }
     
     .summary-card .card-value {
-        font-size: 14pt;
+        font-size: 11pt;
         font-weight: bold;
         color: black !important;
+        margin-bottom: 0.1cm;
     }
     
     .summary-card .card-label {
-        font-size: 9pt;
+        font-size: 8pt;
         color: #666 !important;
+        line-height: 1.1;
     }
     
     .summary-card .card-subtitle {
-        font-size: 8pt;
+        font-size: 7pt;
         color: #888 !important;
+        line-height: 1.1;
     }
     
     /* Título de resultados */
@@ -807,18 +810,104 @@ section h2 {
         background: #e0e0e0 !important;
         color: black !important;
         font-weight: bold;
-        text-align: left;
-        padding: 0.15cm;
+        text-align: center !important;
+        vertical-align: middle !important;
+        padding: 0.1cm;
         border: 1px solid #666;
-        font-size: 9pt;
+        font-size: 8pt;
         page-break-after: avoid;
+        line-height: 1.2;
+    }
+    
+    /* Ocultar iconos de ordenación en impresión */
+    .results-table .sort-indicator {
+        display: none !important;
     }
     
     .results-table td {
-        padding: 0.1cm;
+        padding: 0.08cm;
         border: 1px solid #ccc;
         page-break-inside: avoid;
-        vertical-align: top;
+        vertical-align: middle !important;
+        font-size: 7.5pt;
+        line-height: 1.2;
+    }
+    
+    /* Centrar las columnas numéricas en impresión */
+    .results-table .centered-cell {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+    
+    .results-table td:nth-child(5),
+    .results-table td:nth-child(6), 
+    .results-table td:nth-child(7) {
+        text-align: center !important;
+        vertical-align: middle !important;
+    }
+    
+    /* Columna Socio: izquierda horizontal, centro vertical */
+    .results-table td:nth-child(1) {
+        text-align: left !important;
+        vertical-align: middle !important;
+    }
+    
+    /* Hacer más compacta la caja del total en impresión */
+    .results-table .total-badge-compact {
+        padding: 0.1rem 0.2rem !important;
+        font-size: 0.7rem !important;
+        min-width: 1rem !important;
+        line-height: 1.1 !important;
+    }
+    
+    .results-table .tipo-badge {
+        padding: 0.05rem 0.15rem !important;
+        font-size: 0.65rem !important;
+        line-height: 1 !important;
+    }
+    
+    /* Convertir columna Total a horizontal en impresión */
+    .results-table .matriculas-count-compact {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.2rem !important;
+        line-height: 1.1 !important;
+        flex-wrap: nowrap !important;
+    }
+    
+    .results-table .tipo-breakdown-compact {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 0.1rem !important;
+        margin-top: 0 !important;
+        align-items: center !important;
+    }
+    
+    /* Convertir columna Permisos por mes a horizontal en impresión */
+    .results-table .seasonal-freq {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 0.3rem !important;
+        font-size: 0.75rem !important;
+        line-height: 1.1 !important;
+        flex-wrap: nowrap !important;
+    }
+    
+    .results-table .freq-winter,
+    .results-table .freq-summer {
+        font-size: 0.75rem !important;
+        line-height: 1.1 !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Ocultar columna de matrículas */
+    .results-table th:nth-child(8),
+    .results-table td:nth-child(8) {
+        display: none !important;
     }
     
     /* Alternar colores de filas */
@@ -832,11 +921,29 @@ section h2 {
     
     /* Ajustes de contenido de celdas */
     .results-table .plates-cell {
-        font-weight: bold;
+        font-weight: normal;
     }
     
     .results-table .season-icons {
         font-size: 7pt;
+    }
+    
+    /* Nombre del socio sin negrita - sin restricción de líneas */
+    .results-table .socio-cell {
+        font-weight: normal !important;
+    }
+    
+    /* Ocultar íconos del modal (ojo) en la impresión */
+    .clickable-metric {
+        cursor: default !important;
+    }
+    
+    .modal-eye {
+        display: none !important;
+    }
+    
+    .clickable-metric::after {
+        display: none !important;
     }
     
     /* Salto de página */
@@ -849,14 +956,14 @@ section h2 {
         page-break-inside: avoid;
     }
     
-    /* Ajustar anchos de columnas para A4 */
-    .results-table th:nth-child(1) { width: 25%; } /* Socio */
-    .results-table th:nth-child(2) { width: 12%; } /* Total */
-    .results-table th:nth-child(3) { width: 12%; } /* Días promedio */
-    .results-table th:nth-child(4) { width: 18%; } /* Frecuencia */
-    .results-table th:nth-child(5) { width: 12%; } /* Permisos cortos */
-    .results-table th:nth-child(6) { width: 12%; } /* Solapamientos */
-    .results-table th:nth-child(7) { width: 9%; }  /* Pico simultáneo */
+    /* Ajustar anchos de columnas para A4 (sin columna matrículas) */
+    .results-table th:nth-child(1) { width: 33%; } /* Socio - reducido ligeramente */
+    .results-table th:nth-child(2) { width: 14%; } /* Total - más espacio para horizontal */
+    .results-table th:nth-child(3) { width: 10%; } /* Días promedio */
+    .results-table th:nth-child(4) { width: 16%; } /* Frecuencia - más espacio para horizontal */
+    .results-table th:nth-child(5) { width: 10%; } /* Permisos cortos */
+    .results-table th:nth-child(6) { width: 9%; }  /* Solapamientos */
+    .results-table th:nth-child(7) { width: 8%; }  /* Pico simultáneo */
     
     /* Pie de página con información de impresión */
     .results-section::after {

@@ -96,12 +96,12 @@ class UIComponents {
             <tr>
                 <td class="socio-cell"><strong>${this.escapeHtml(row.socio || row.member)}</strong></td>
                 <td>
-                    <div class="matriculas-count">
-                        <span class="total-badge">${row.totalMatriculas || (row.matriculas ? row.matriculas.length : 0)}</span>
+                    <div class="matriculas-count-compact">
+                        <span class="total-badge-compact">${row.totalMatriculas || (row.matriculas ? row.matriculas.length : 0)}</span>
                         ${row.temporales !== undefined ? `
-                            <div class="tipo-breakdown">
-                                <span class="matricula-badge matricula-temporal">T:${row.temporales}</span>
-                                <span class="matricula-badge matricula-permanente">P:${row.permanentes}</span>
+                            <div class="tipo-breakdown-compact">
+                                <span class="tipo-badge temp">T:${row.temporales}</span>
+                                <span class="tipo-badge perm">P:${row.permanentes}</span>
                             </div>
                         ` : ''}
                     </div>
@@ -116,21 +116,21 @@ class UIComponents {
                         ${this.formatSeasonalFrequency(row.frecuenciaEstacional)}
                     </div>
                 </td>
-                <td>
+                <td class="centered-cell">
                     <span class="metric-badge ${row.permisosCortos > 5 ? 'metric-warning' : ''}" title="Permisos de 7 días o menos">
                         ${row.permisosCortos || 0}
                     </span>
                 </td>
-                <td>
+                <td class="centered-cell">
                     <span class="metric-badge ${row.solapamientos > 3 ? 'metric-warning' : ''}" title="Solapamientos de matrículas activas">
                         ${row.solapamientos || 0}
                     </span>
                 </td>
-                <td>
+                <td class="centered-cell">
                     <span class="metric-badge clickable-metric ${row.picoSimultaneo > 4 ? 'metric-warning' : ''}" 
                           title="Máximo de matrículas temporales activas simultáneamente - Clic para ver detalles"
                           onclick="window.uiComponents.showPicoSimultaneoModal('${this.escapeForAttribute(row.socio || row.member)}', '${this.generateRowId(row)}')">
-                        ${row.picoSimultaneo || 0} 👁️
+                        ${row.picoSimultaneo || 0}<span class="modal-eye"> 👁️</span>
                     </span>
                 </td>
                 <td>
@@ -970,17 +970,41 @@ class UIComponents {
                 .matriculas-count {
                     text-align: center;
                 }
+                .matriculas-count-compact {
+                    text-align: center;
+                    font-size: 0.85rem;
+                    line-height: 1.2;
+                }
                 .tipo-breakdown {
                     display: flex;
                     gap: 0.25rem;
                     justify-content: center;
                     margin-top: 0.25rem;
                 }
+                .tipo-breakdown-compact {
+                    display: flex;
+                    gap: 0.15rem;
+                    justify-content: center;
+                    margin-top: 0.15rem;
+                }
                 .matricula-badge {
                     font-size: 0.75rem;
                     padding: 0.125rem 0.25rem;
                     border-radius: 0.25rem;
                     font-weight: 500;
+                }
+                .tipo-badge {
+                    font-size: 0.7rem;
+                    padding: 0.1rem 0.2rem;
+                    border-radius: 0.2rem;
+                    font-weight: 500;
+                    color: white;
+                }
+                .tipo-badge.temp {
+                    background-color: #f59e0b;
+                }
+                .tipo-badge.perm {
+                    background-color: #10b981;
                 }
                 .matricula-temporal {
                     background-color: var(--warning-bg, #fef3c7);
@@ -1001,6 +1025,18 @@ class UIComponents {
                     border: 1px solid #c7d2fe;
                     text-align: center;
                     min-width: 2rem;
+                }
+                .total-badge-compact {
+                    display: inline-block;
+                    padding: 0.15rem 0.3rem;
+                    border-radius: 0.25rem;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    background-color: #e0e7ff;
+                    color: #3730a3;
+                    border: 1px solid #c7d2fe;
+                    text-align: center;
+                    min-width: 1.2rem;
                 }
             `;
             document.head.appendChild(style);
