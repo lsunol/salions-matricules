@@ -242,23 +242,32 @@ class SalionsApp {
      * Configura los filtros
      */
     setupFilters() {
-        const applyButton = document.getElementById('applyFilters');
         const resetButton = document.getElementById('resetFilters');
-
-        applyButton?.addEventListener('click', () => {
-            this.applyCurrentFilters();
-        });
 
         resetButton?.addEventListener('click', () => {
             this.resetFilters();
         });
 
-        // Aplicar filtros al cambiar valores (con debounce)
-        const filterInputs = document.querySelectorAll('#platesThreshold, #dateRange, #seasonFilter');
-        filterInputs.forEach(input => {
-            input.addEventListener('change', () => {
-                setTimeout(() => this.applyCurrentFilters(), 100);
-            });
+        // Aplicar filtros en tiempo real con debounce
+        const nameFilter = document.getElementById('nameFilter');
+        const platesThreshold = document.getElementById('platesThreshold');
+        const dateRange = document.getElementById('dateRange');
+        const seasonFilter = document.getElementById('seasonFilter');
+
+        // Debounce para el filtro de texto
+        let nameFilterTimeout;
+        nameFilter?.addEventListener('input', () => {
+            clearTimeout(nameFilterTimeout);
+            nameFilterTimeout = setTimeout(() => this.applyCurrentFilters(), 300);
+        });
+
+        // Eventos inmediatos para otros filtros
+        [platesThreshold, dateRange, seasonFilter].forEach(input => {
+            if (input) {
+                input.addEventListener('change', () => {
+                    this.applyCurrentFilters();
+                });
+            }
         });
     }
 
@@ -318,6 +327,14 @@ class SalionsApp {
                 ...group,
                 matriculasDetalle: group.matriculas || group.matriculasDetalle || []
             }));
+
+            // Aplicar filtro de búsqueda por nombre
+            if (filters.nameSearch) {
+                filteredData = filteredData.filter(group => {
+                    const socioName = (group.socio || '').toLowerCase();
+                    return socioName.includes(filters.nameSearch);
+                });
+            }
             
             this.ui.renderTable(filteredData);
             
@@ -340,12 +357,14 @@ class SalionsApp {
      * @returns {Object} Filtros
      */
     getCurrentFilters() {
+        const nameFilter = document.getElementById('nameFilter');
         const platesThreshold = document.getElementById('platesThreshold');
         const dateRange = document.getElementById('dateRange');
         const seasonFilter = document.getElementById('seasonFilter');
         const matriculaTypeFilter = document.getElementById('matriculaTypeFilter');
 
         return {
+            nameSearch: nameFilter ? nameFilter.value.toLowerCase().trim() : '',
             minPlates: platesThreshold ? parseInt(platesThreshold.value) || 1 : 1,
             dateRangeDays: dateRange && dateRange.value !== 'all' ? parseInt(dateRange.value) : null,
             season: seasonFilter ? seasonFilter.value : 'all',
@@ -357,10 +376,12 @@ class SalionsApp {
      * Resetea todos los filtros
      */
     resetFilters() {
+        const nameFilter = document.getElementById('nameFilter');
         const platesThreshold = document.getElementById('platesThreshold');
         const dateRange = document.getElementById('dateRange');
         const seasonFilter = document.getElementById('seasonFilter');
 
+        if (nameFilter) nameFilter.value = '';
         if (platesThreshold) platesThreshold.value = 5;
         if (dateRange) dateRange.value = 'all';
         if (seasonFilter) seasonFilter.value = 'all';

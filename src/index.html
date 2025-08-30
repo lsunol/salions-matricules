@@ -59,6 +59,10 @@
                 <h2>🔍 Filtros de análisis</h2>
                 <div class="filters-container">
                     <div class="filter-group">
+                        <label for="nameFilter">Buscar por nombre:</label>
+                        <input type="text" id="nameFilter" placeholder="Escribir nombre del socio...">
+                    </div>
+                    <div class="filter-group">
                         <label for="platesThreshold">Mínimo matrículas:</label>
                         <input type="number" id="platesThreshold" min="1" value="5">
                     </div>
@@ -80,7 +84,6 @@
                             <option value="invierno">Invierno (Oct-May)</option>
                         </select>
                     </div>
-                    <button id="applyFilters" class="btn-primary">Aplicar filtros</button>
                     <button id="resetFilters" class="btn-secondary">Resetear</button>
                 </div>
             </section>
