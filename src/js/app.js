@@ -453,7 +453,32 @@ class SalionsApp {
             }
             
             // Notificar al usuario
-            this.ui.showNotification('Preparando vista de impresión...', 'info', 2000);
+            this.ui.showNotification('Preparando vista de impresión completa...', 'info', 2000);
+            
+            // Guardar estado actual de paginación
+            const originalPage = this.ui.currentPage;
+            const originalItemsPerPage = this.ui.itemsPerPage;
+            
+            // Configurar para mostrar todos los elementos
+            this.ui.itemsPerPage = this.ui.filteredData.length;
+            this.ui.currentPage = 1;
+            
+            // Re-renderizar la tabla completa
+            this.ui.renderCurrentPage();
+            
+            // Configurar eventos para después de la impresión
+            const afterPrint = () => {
+                // Restaurar configuración original
+                this.ui.itemsPerPage = originalItemsPerPage;
+                this.ui.currentPage = originalPage;
+                this.ui.renderCurrentPage();
+                this.ui.updatePagination();
+                
+                // Limpiar eventos
+                window.removeEventListener('afterprint', afterPrint);
+            };
+            
+            window.addEventListener('afterprint', afterPrint);
             
             // Pequeño delay para mostrar la notificación antes de abrir el diálogo
             setTimeout(() => {
