@@ -185,7 +185,7 @@ class UIComponents {
         
         if (matriculas.length === 0) return '';
         
-        const maxVisible = 5; // Mostrar solo 5 matrículas
+        const maxVisible = 3; // Mostrar solo 3 matrículas
         const visibleMatriculas = matriculas.slice(0, maxVisible);
         const totalMatriculas = matriculas.length;
         const rowId = this.generateRowId(row);
