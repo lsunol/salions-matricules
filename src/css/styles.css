@@ -254,6 +254,22 @@ section h2 {
     gap: 1rem;
 }
 
+/* Información de filtros aplicados */
+.filters-info {
+    background: var(--surface-light);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+}
+
+.filters-description {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin: 0;
+    font-style: italic;
+}
+
 .table-container {
     overflow-x: auto;
     border: 1px solid var(--border);
@@ -801,6 +817,25 @@ section h2 {
         font-size: 7pt;
         color: #888 !important;
         line-height: 1.1;
+    }
+    
+    /* Información de filtros en impresión */
+    .filters-info {
+        display: block !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+        margin-bottom: 0.3cm !important;
+    }
+    
+    .filters-description {
+        font-size: 9pt !important;
+        color: #666 !important;
+        font-style: italic !important;
+        text-align: center !important;
+        margin: 0 !important;
+        padding: 0.2cm 0 !important;
+        border-bottom: 1px solid #ccc !important;
     }
     
     /* Título de resultados */

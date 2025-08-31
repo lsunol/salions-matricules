@@ -292,21 +292,8 @@ class SalionsApp {
                 );
             }
 
-            if (filters.matriculaType && filters.matriculaType !== 'all') {
-                if (filters.dateRangeDays) {
-                    // Aplicar filtro de tipo sobre datos ya filtrados por período
-                    baseData = this.applyMatriculaTypeFilterToData(baseData, filters.matriculaType);
-                } else {
-                    // Aplicar filtro de tipo directamente
-                    baseData = this.dataAnalyzer.filterSociosByMatriculaType(
-                        filters.matriculaType, 
-                        filters.dateRangeDays
-                    );
-                }
-            }
-
             if (filters.season && filters.season !== 'all') {
-                if (filters.dateRangeDays || (filters.matriculaType && filters.matriculaType !== 'all')) {
+                if (filters.dateRangeDays) {
                     // Aplicar filtro de temporada sobre datos ya filtrados
                     baseData = this.applySeasonFilterToData(baseData, filters.season);
                 } else {
@@ -338,6 +325,9 @@ class SalionsApp {
             
             this.ui.renderTable(filteredData);
             
+            // Actualizar descripción de filtros
+            this.updateFiltersDescription(filters);
+            
             // Mostrar mensaje si no hay resultados
             if (filteredData.length === 0) {
                 this.ui.showNotification('No se encontraron resultados con los filtros aplicados', 'warning');
@@ -361,14 +351,12 @@ class SalionsApp {
         const platesThreshold = document.getElementById('platesThreshold');
         const dateRange = document.getElementById('dateRange');
         const seasonFilter = document.getElementById('seasonFilter');
-        const matriculaTypeFilter = document.getElementById('matriculaTypeFilter');
 
         return {
             nameSearch: nameFilter ? nameFilter.value.toLowerCase().trim() : '',
             minPlates: platesThreshold ? parseInt(platesThreshold.value) || 1 : 1,
             dateRangeDays: dateRange && dateRange.value !== 'all' ? parseInt(dateRange.value) : null,
-            season: seasonFilter ? seasonFilter.value : 'all',
-            matriculaType: matriculaTypeFilter ? matriculaTypeFilter.value : 'all'
+            season: seasonFilter ? seasonFilter.value : 'all'
         };
     }
 
@@ -388,6 +376,57 @@ class SalionsApp {
 
         this.applyCurrentFilters();
         this.ui.showNotification('Filtros reiniciados', 'info', 2000);
+    }
+
+    /**
+     * Actualiza la descripción textual de los filtros aplicados
+     * @param {Object} filters - Filtros aplicados
+     */
+    updateFiltersDescription(filters) {
+        const filtersInfo = document.getElementById('filtersInfo');
+        const filtersDescription = document.getElementById('filtersDescription');
+        
+        if (!filtersInfo || !filtersDescription) return;
+
+        let description = "Filtrando los socios";
+
+        // Filtro de búsqueda por nombre
+        if (filters.nameSearch) {
+            description += ` que contienen la palabra "${filters.nameSearch}",`;
+        }
+
+        // Filtro de número mínimo de matrículas
+        if (filters.minPlates > 1) {
+            description += ` con más de ${filters.minPlates} matrículas,`;
+        } else {
+            description += ` con al menos ${filters.minPlates} matrícula,`;
+        }
+
+        // Filtro de rango de fechas
+        if (filters.dateRangeDays) {
+            const today = new Date();
+            const startDate = new Date(today.getTime() - (filters.dateRangeDays * 24 * 60 * 60 * 1000));
+            
+            description += ` desde el ${startDate.toLocaleDateString('es-ES')} al ${today.toLocaleDateString('es-ES')} (últimos ${filters.dateRangeDays} días),`;
+        } else {
+            description += " desde el inicio de los tiempos,";
+        }
+
+        // Filtro de temporada
+        if (filters.season && filters.season !== 'all') {
+            if (filters.season === 'verano') {
+                description += " en temporada de verano";
+            } else if (filters.season === 'invierno') {
+                description += " en temporada de invierno";
+            }
+        } else {
+            description += " en temporada de invierno y verano";
+        }
+
+        description += ".";
+
+        filtersDescription.textContent = description;
+        filtersInfo.style.display = 'block';
     }
 
     /**
