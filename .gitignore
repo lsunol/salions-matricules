@@ -67,3 +67,5 @@ Thumbs.db
 
 # Build artifacts that shouldn't be tracked
 build/output/
+
+ejemplo_matriculas.csv
