@@ -208,6 +208,75 @@ class DataAnalyzer {
     }
 
     /**
+     * Filtra socios por rango de fechas específico
+     * @param {number} minMatriculas - Número mínimo de matrículas
+     * @param {Date} fechaDesde - Fecha de inicio del rango
+     * @param {Date} fechaHasta - Fecha de fin del rango
+     * @returns {Array} Array de socios que cumplen el criterio
+     */
+    filterSociosByDateRange(minMatriculas, fechaDesde = null, fechaHasta = null) {
+        return Array.from(this.groupedData.values())
+            .map(group => {
+                let matriculasEnRango = group.matriculas;
+                
+                // Aplicar filtro de fecha desde
+                if (fechaDesde) {
+                    matriculasEnRango = matriculasEnRango.filter(m => 
+                        !m.fechaInicio || m.fechaInicio >= fechaDesde
+                    );
+                }
+                
+                // Aplicar filtro de fecha hasta
+                if (fechaHasta) {
+                    matriculasEnRango = matriculasEnRango.filter(m => 
+                        !m.fechaInicio || m.fechaInicio <= fechaHasta
+                    );
+                }
+                
+                if (matriculasEnRango.length === 0) {
+                    return null; // Filtrar después
+                }
+                
+                // Recalcular estadísticas solo para las matrículas del rango
+                const temporalesEnRango = matriculasEnRango.filter(m => m.tipoMatricula === 'temporal');
+                const permanentesEnRango = matriculasEnRango.filter(m => m.tipoMatricula === 'permanente');
+                
+                // Calcular días promedio por permiso
+                const diasPromedio = this.calculateAveragePermitDays(temporalesEnRango);
+                
+                // Calcular frecuencia estacional
+                const frecuencia = this.calculateSeasonalFrequency(matriculasEnRango);
+                
+                // Contar permisos cortos
+                const permisosCortos = this.countShortPermits(matriculasEnRango);
+                
+                // Contar solapamientos
+                const solapamientos = this.countOverlappingPlates(matriculasEnRango);
+                
+                // Encontrar pico simultáneo
+                const peakData = this.findPeakSimultaneous(matriculasEnRango);
+                
+                return {
+                    socio: group.socio,
+                    matriculas: matriculasEnRango, // Para compatibilidad con la UI
+                    matriculasDetalle: matriculasEnRango,
+                    totalMatriculas: matriculasEnRango.length, // Total del rango filtrado
+                    temporales: temporalesEnRango.length,
+                    permanentes: permanentesEnRango.length,
+                    diasPromedioPermiso: diasPromedio,
+                    frecuenciaEstacional: frecuencia,
+                    permisosCortos: permisosCortos,
+                    solapamientos: solapamientos,
+                    picoSimultaneo: (peakData.details && peakData.details.matriculas) ? peakData.details.matriculas.length : 0,
+                    picoDetalle: peakData.details,
+                    fechaUltimoRegistro: group.fechaUltimoRegistro
+                };
+            })
+            .filter(item => item !== null && item.totalMatriculas >= minMatriculas)
+            .sort((a, b) => b.totalMatriculas - a.totalMatriculas);
+    }
+
+    /**
      * Filtra socios por tipo de matrícula
      * @param {string} tipo - 'temporal' o 'permanente'
      * @param {number} diasAtras - Días hacia atrás desde hoy para el filtro temporal

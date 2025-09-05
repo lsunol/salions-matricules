@@ -209,6 +209,72 @@ section h2 {
     box-shadow: 0 0 0 3px rgb(37 99 235 / 0.1);
 }
 
+/* Date filter specific styles */
+.date-filter-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.date-inputs {
+    display: flex;
+    gap: 1rem;
+}
+
+.date-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+}
+
+.date-input-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.date-quick-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-date-quick {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) * 0.75);
+    background-color: var(--surface);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-date-quick:hover {
+    background-color: var(--background);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.btn-date-quick.active {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+/* Responsive date filters */
+@media (max-width: 640px) {
+    .date-inputs {
+        flex-direction: column;
+    }
+    
+    .date-quick-buttons {
+        justify-content: center;
+    }
+}
+
 /* Buttons */
 .btn-primary,
 .btn-secondary {

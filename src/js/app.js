@@ -214,6 +214,9 @@ class SalionsApp {
             // Activar modo compacto de la interfaz
             this.activateCompactMode();
             
+            // Inicializar fechas por defecto
+            this.initializeDateFilters();
+            
             // Actualizar UI
             this.ui.updateSummaryCards(stats);
             this.showAnalysisSection();
@@ -251,7 +254,8 @@ class SalionsApp {
         // Aplicar filtros en tiempo real con debounce
         const nameFilter = document.getElementById('nameFilter');
         const platesThreshold = document.getElementById('platesThreshold');
-        const dateRange = document.getElementById('dateRange');
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
         const seasonFilter = document.getElementById('seasonFilter');
 
         // Debounce para el filtro de texto
@@ -262,13 +266,97 @@ class SalionsApp {
         });
 
         // Eventos inmediatos para otros filtros
-        [platesThreshold, dateRange, seasonFilter].forEach(input => {
+        [platesThreshold, dateFrom, dateTo, seasonFilter].forEach(input => {
             if (input) {
                 input.addEventListener('change', () => {
                         this.applyCurrentFilters();
                 });
             }
         });
+
+        // Configurar botones de acceso rápido para fechas
+        this.setupDateQuickButtons();
+    }
+
+    /**
+     * Inicializa los filtros de fecha con valores por defecto
+     */
+    initializeDateFilters() {
+        // Establecer rango completo por defecto
+        this.setDateRange('all');
+        
+        // Activar el botón "Todo"
+        const allButton = document.querySelector('.btn-date-quick[data-days="all"]');
+        if (allButton) allButton.classList.add('active');
+    }
+
+    /**
+     * Configura los botones de acceso rápido para las fechas
+     */
+    setupDateQuickButtons() {
+        const quickButtons = document.querySelectorAll('.btn-date-quick');
+        
+        quickButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const days = button.dataset.days;
+                this.setDateRange(days);
+                
+                // Actualizar estado visual de botones
+                quickButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Aplicar filtros
+                this.applyCurrentFilters();
+            });
+        });
+    }
+
+    /**
+     * Establece el rango de fechas basado en los días especificados
+     * @param {string|number} days - Número de días hacia atrás desde hoy, o 'all' para todo el rango
+     */
+    setDateRange(days) {
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
+        
+        if (!dateFrom || !dateTo) return;
+
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        dateTo.value = todayStr;
+
+        if (days === 'all') {
+            // Establecer la fecha mínima disponible en los datos
+            const minDate = this.getMinDateFromData();
+            dateFrom.value = minDate;
+        } else {
+            // Calcular fecha hacia atrás
+            const daysNum = parseInt(days);
+            const fromDate = new Date(today.getTime() - (daysNum * 24 * 60 * 60 * 1000));
+            dateFrom.value = fromDate.toISOString().split('T')[0];
+        }
+    }
+
+    /**
+     * Obtiene la fecha mínima de los datos cargados
+     * @returns {string} Fecha en formato YYYY-MM-DD
+     */
+    getMinDateFromData() {
+        if (!this.currentData || this.currentData.length === 0) {
+            // Fecha por defecto si no hay datos
+            return '1970-01-01';
+        }
+
+        let minDate = new Date();
+        
+        this.currentData.forEach(record => {
+            if (record.fechaInicio && record.fechaInicio < minDate) {
+                minDate = record.fechaInicio;
+            }
+        });
+
+        return minDate.toISOString().split('T')[0];
     }
 
     /**
@@ -285,7 +373,15 @@ class SalionsApp {
             let baseData = this.dataAnalyzer.getGroupedBySocio();
 
             // Aplicar filtros de forma acumulativa
-            if (filters.dateRangeDays) {
+            if (filters.dateFrom || filters.dateTo) {
+                // Usar filtro de rango de fechas específico
+                baseData = this.dataAnalyzer.filterSociosByDateRange(
+                    filters.minPlates,
+                    filters.dateFrom,
+                    filters.dateTo
+                );
+            } else if (filters.dateRangeDays) {
+                // Usar filtro de días hacia atrás (compatibilidad)
                 baseData = this.dataAnalyzer.filterSociosByMatriculasInPeriod(
                     filters.minPlates,
                     filters.dateRangeDays
@@ -293,7 +389,7 @@ class SalionsApp {
             }
 
             if (filters.season && filters.season !== 'all') {
-                if (filters.dateRangeDays) {
+                if (filters.dateFrom || filters.dateTo || filters.dateRangeDays) {
                     // Aplicar filtro de temporada sobre datos ya filtrados
                     baseData = this.applySeasonFilterToData(baseData, filters.season);
                 } else {
@@ -349,13 +445,31 @@ class SalionsApp {
     getCurrentFilters() {
         const nameFilter = document.getElementById('nameFilter');
         const platesThreshold = document.getElementById('platesThreshold');
-        const dateRange = document.getElementById('dateRange');
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
         const seasonFilter = document.getElementById('seasonFilter');
+
+        // Calcular dateRangeDays si hay fechas específicas
+        let dateRangeDays = null;
+        if (dateFrom?.value && dateTo?.value) {
+            const fromDate = new Date(dateFrom.value);
+            const toDate = new Date(dateTo.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Si la fecha "hasta" es hoy, calcular días desde "desde"
+            if (toDate.toDateString() === today.toDateString()) {
+                const diffTime = today.getTime() - fromDate.getTime();
+                dateRangeDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            }
+        }
 
         return {
             nameSearch: nameFilter ? nameFilter.value.toLowerCase().trim() : '',
             minPlates: platesThreshold ? parseInt(platesThreshold.value) || 1 : 1,
-            dateRangeDays: dateRange && dateRange.value !== 'all' ? parseInt(dateRange.value) : null,
+            dateRangeDays: dateRangeDays,
+            dateFrom: dateFrom?.value ? new Date(dateFrom.value) : null,
+            dateTo: dateTo?.value ? new Date(dateTo.value) : null,
             season: seasonFilter ? seasonFilter.value : 'all'
         };
     }
@@ -366,13 +480,21 @@ class SalionsApp {
     resetFilters() {
         const nameFilter = document.getElementById('nameFilter');
         const platesThreshold = document.getElementById('platesThreshold');
-        const dateRange = document.getElementById('dateRange');
+        const dateFrom = document.getElementById('dateFrom');
+        const dateTo = document.getElementById('dateTo');
         const seasonFilter = document.getElementById('seasonFilter');
 
         if (nameFilter) nameFilter.value = '';
         if (platesThreshold) platesThreshold.value = 5;
-        if (dateRange) dateRange.value = 'all';
         if (seasonFilter) seasonFilter.value = 'all';
+
+        // Resetear fechas a "todo el rango"
+        this.setDateRange('all');
+
+        // Quitar estado activo de botones
+        document.querySelectorAll('.btn-date-quick').forEach(btn => btn.classList.remove('active'));
+        const allButton = document.querySelector('.btn-date-quick[data-days="all"]');
+        if (allButton) allButton.classList.add('active');
 
         this.applyCurrentFilters();
         this.ui.showNotification('Filtros reiniciados', 'info', 2000);
@@ -403,11 +525,19 @@ class SalionsApp {
         }
 
         // Filtro de rango de fechas
-        if (filters.dateRangeDays) {
-            const today = new Date();
-            const startDate = new Date(today.getTime() - (filters.dateRangeDays * 24 * 60 * 60 * 1000));
+        if (filters.dateFrom && filters.dateTo) {
+            const fromStr = filters.dateFrom.toLocaleDateString('es-ES');
+            const toStr = filters.dateTo.toLocaleDateString('es-ES');
             
-            description += ` desde el ${startDate.toLocaleDateString('es-ES')} al ${today.toLocaleDateString('es-ES')} (últimos ${filters.dateRangeDays} días),`;
+            if (filters.dateRangeDays) {
+                description += ` desde el ${fromStr} al ${toStr} (últimos ${filters.dateRangeDays} días),`;
+            } else {
+                description += ` desde el ${fromStr} al ${toStr},`;
+            }
+        } else if (filters.dateFrom) {
+            description += ` desde el ${filters.dateFrom.toLocaleDateString('es-ES')},`;
+        } else if (filters.dateTo) {
+            description += ` hasta el ${filters.dateTo.toLocaleDateString('es-ES')},`;
         } else {
             description += " desde el inicio de los tiempos,";
         }
