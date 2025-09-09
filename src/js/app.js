@@ -411,11 +411,23 @@ class SalionsApp {
                 matriculasDetalle: group.matriculas || group.matriculasDetalle || []
             }));
 
-            // Aplicar filtro de búsqueda por nombre
+            // Aplicar filtro de búsqueda por nombre o matrícula
             if (filters.nameSearch) {
                 filteredData = filteredData.filter(group => {
                     const socioName = (group.socio || '').toLowerCase();
-                    return socioName.includes(filters.nameSearch);
+                    const searchTerm = filters.nameSearch;
+                    
+                    // Buscar en el nombre del socio
+                    if (socioName.includes(searchTerm)) {
+                        return true;
+                    }
+                    
+                    // Buscar en las matrículas del socio
+                    const matriculas = group.matriculasDetalle || group.matriculas || [];
+                    return matriculas.some(matricula => {
+                        const numeroMatricula = (matricula.matricula || '').toLowerCase();
+                        return numeroMatricula.includes(searchTerm);
+                    });
                 });
             }
             
@@ -512,9 +524,9 @@ class SalionsApp {
 
         let description = "Filtrando los socios";
 
-        // Filtro de búsqueda por nombre
+        // Filtro de búsqueda por nombre o matrícula
         if (filters.nameSearch) {
-            description += ` que contienen la palabra "${filters.nameSearch}",`;
+            description += ` que contienen "${filters.nameSearch}" (en nombre o matrícula),`;
         }
 
         // Filtro de número mínimo de matrículas
