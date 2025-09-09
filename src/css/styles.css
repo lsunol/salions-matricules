@@ -176,8 +176,8 @@ section h2 {
 
 /* Filters */
 .filters-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
     align-items: end;
 }
@@ -186,6 +186,33 @@ section h2 {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+}
+
+/* Anchos específicos para cada filtro */
+.filter-group:nth-child(1) { /* Buscar por nombre */
+    width: 22%;
+}
+
+.filter-group:nth-child(2) { /* Mínimo matrículas */
+    width: 13%;
+}
+
+.filter-group:nth-child(3) { /* Periodo */
+    width: 33%;
+    min-width: 367px;
+}
+
+.filter-group:nth-child(4) { /* Temporada */
+    width: 16%;
+    min-width: 150px;
+}
+
+.filter-group .btn-secondary { /* Botón resetear */
+    width: 10%;
+    min-width: 100px;
+    align-self: flex-end;
+    height: fit-content;
+    margin-top: auto;
 }
 
 .filter-group label {
@@ -558,7 +585,17 @@ section h2 {
     }
     
     .filters-container {
-        grid-template-columns: 1fr;
+        flex-direction: column;
+    }
+    
+    /* En móviles, todos los filtros ocupan el 100% del ancho */
+    .filter-group:nth-child(1),
+    .filter-group:nth-child(2), 
+    .filter-group:nth-child(3),
+    .filter-group:nth-child(4),
+    .filter-group .btn-secondary {
+        width: 100%;
+        min-width: auto;
     }
     
     .results-header {
